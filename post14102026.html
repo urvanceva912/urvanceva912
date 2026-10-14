@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Криптовозможности браузера · window.crypto</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Highlight.js стили -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github-dark.min.css">
+  <style>
+    body {
+      background: #0b0f17;
+      color: #e6edf3;
+    }
+    .navbar, .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+    }
+    .navbar-brand, .nav-link, .card-title, h1, h2, h3 {
+      color: #e6edf3 !important;
+    }
+    .lead, p, li {
+      color: #c9d1d9;
+    }
+    .text-muted {
+      color: #8b949e !important;
+    }
+    .badge-algo {
+      background: #1f6feb;
+      color: white;
+    }
+    .btn-primary {
+      background: #238636;
+      border-color: #238636;
+    }
+    .btn-primary:hover {
+      background: #2ea043;
+      border-color: #2ea043;
+    }
+    .btn-secondary {
+      background: #21262d;
+      border-color: #30363d;
+      color: #e6edf3;
+    }
+    .btn-secondary:hover {
+      background: #30363d;
+      border-color: #8b949e;
+      color: #e6edf3;
+    }
+    .form-control, .form-select {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #e6edf3;
+    }
+    .form-control:focus, .form-select:focus {
+      background: #0d1117;
+      border-color: #58a6ff;
+      color: #e6edf3;
+      box-shadow: 0 0 0 0.2rem rgba(88,166,255,0.25);
+    }
+    pre {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+    }
+    code.hljs {
+      background: transparent !important;
+      padding: 0;
+    }
+    .result-box {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1rem;
+      word-break: break-all;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      color: #7ee787;
+      max-height: 220px;
+      overflow-y: auto;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .result-box.match {
+      border-color: #2ea043;
+      box-shadow: 0 0 0 1px #2ea043, 0 0 12px rgba(46,160,67,0.35);
+    }
+    .result-box.mismatch {
+      border-color: #f85149;
+      box-shadow: 0 0 0 1px #f85149, 0 0 12px rgba(248,81,73,0.35);
+    }
+    .algo-section {
+      border-left: 3px solid #1f6feb;
+      padding-left: 1.25rem;
+      margin: 2rem 0;
+    }
+    .algo-section h4 {
+      color: #58a6ff;
+    }
+    .footer-note {
+      border-top: 1px solid #30363d;
+      padding-top: 1rem;
+      margin-top: 2rem;
+      color: #8b949e;
+      font-size: 0.85rem;
+    }
+    .avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .comparison-status {
+      text-align: center;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+    .comparison-status.ok {
+      background: rgba(46,160,67,0.15);
+      color: #3fb950;
+      border: 1px solid #2ea043;
+    }
+    .comparison-status.fail {
+      background: rgba(248,81,73,0.15);
+      color: #f85149;
+      border: 1px solid #f85149;
+    }
+    .comparison-status.idle {
+      background: rgba(139,148,158,0.1);
+      color: #8b949e;
+      border: 1px solid #30363d;
+    }
+    .step-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8b949e;
+      margin-bottom: 0.35rem;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Навигация -->
+<nav class="navbar mb-4">
+  <div class="container d-flex justify-content-between align-items-center w-100">
+    <a class="navbar-brand" href="#">Крипто-лаборатория</a>
+    <img src="https://avatars.mds.yandex.net/i?id=e2dbf0eea03d887a95a6b2a5b1cfe7a35112f997-5243585-images-thumbs&n=13"
+         alt="Аватар" class="avatar">
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Hero -->
+  <div class="p-4 p-md-5 mb-4 rounded text-bg-dark" style="background:#161b22;border:1px solid #30363d">
+    <h1 class="display-5 fst-italic">window.crypto</h1>
+    <p class="lead my-3">Обзор алгоритмов шифрования, доступных прямо в браузере. Введите текст и пароль — получите зашифрованное сообщение, затем расшифруйте его и проверьте результат.</p>
+    <p class="lead mb-0"><a href="#" class="text-white fw-bold">Спецификация Web Crypto API...</a></p>
+  </div>
+
+  <!-- Форма шифрования -->
+  <div class="card mb-4 p-4">
+    <h3 class="mb-3">🔐 Шифрование</h3>
+    <div class="mb-3">
+      <label for="plainText" class="form-label">Текст для шифрования</label>
+      <textarea id="plainText" class="form-control" rows="3" placeholder="Введите сообщение...">Привет, Web Crypto!</textarea>
+    </div>
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label for="password" class="form-label">Пароль</label>
+        <input type="password" id="password" class="form-control" placeholder="Введите пароль..." value="secret123">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label for="algorithm" class="form-label">Алгоритм</label>
+        <select id="algorithm" class="form-select">
+          <option value="AES-GCM">AES-GCM (рекомендуется)</option>
+          <option value="AES-CBC">AES-CBC</option>
+          <option value="AES-CTR">AES-CTR</option>
+          <option value="RSA-OAEP">RSA-OAEP</option>
+        </select>
+      </div>
+    </div>
+    <button id="encryptBtn" class="btn btn-primary">Зашифровать</button>
+    <div class="mt-3">
+      <span class="step-label">Шаг 1 · Зашифрованное сообщение (Base64)</span>
+      <div id="cipherOutput" class="result-box">—</div>
+    </div>
+    <div id="status" class="mt-2 text-muted small"></div>
+  </div>
+
+  <!-- Форма расшифрования -->
+  <div class="card mb-5 p-4">
+    <h3 class="mb-3">🔓 Расшифрование</h3>
+    <div class="mb-3">
+      <label for="cipherInput" class="form-label">Зашифрованное сообщение (Base64)</label>
+      <textarea id="cipherInput" class="form-control" rows="3" placeholder="Вставьте сюда шифротекст..."></textarea>
+    </div>
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label for="passwordDec" class="form-label">Пароль</label>
+        <input type="password" id="passwordDec" class="form-control" placeholder="Введите пароль..." value="secret123">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label for="algorithmDec" class="form-label">Алгоритм</label>
+        <select id="algorithmDec" class="form-select">
+          <option value="AES-GCM">AES-GCM (рекомендуется)</option>
+          <option value="AES-CBC">AES-CBC</option>
+          <option value="AES-CTR">AES-CTR</option>
+          <option value="RSA-OAEP">RSA-OAEP</option>
+        </select>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <button id="decryptBtn" class="btn btn-secondary">Расшифровать</button>
+      <button id="copyBtn" class="btn btn-secondary">↧ Вставить шифротекст сверху</button>
+    </div>
+    <div class="mt-3">
+      <span class="step-label">Шаг 2 · Расшифрованное сообщение</span>
+      <div id="plainOutput" class="result-box" style="color:#79c0ff">—</div>
+    </div>
+    <div id="statusDec" class="mt-2 text-muted small"></div>
+
+    <div class="mt-4">
+      <span class="step-label">Шаг 3 · Сравнение исходного и расшифрованного текста</span>
+      <div id="comparison" class="comparison-status idle">Ожидание расшифрования…</div>
+    </div>
+  </div>
+
+  <!-- Обзоры алгоритмов -->
+  <h2 class="mb-4">📖 Обзор алгоритмов</h2>
+
+  <!-- AES-GCM -->
+  <div class="algo-section">
+    <h4>AES-GCM <span class="badge badge-algo">Симметричный · Аутентифицированный</span></h4>
+    <p><strong>История:</strong> GCM (Galois/Counter Mode) был предложен в 2004 году Дэвидом МакГрегором и Джоном Виегой, позже стандартизирован NIST в SP800-38D. Он сочетает в себе счётчик (CTR) для шифрования и код аутентификации GHASH для проверки целостности.</p>
+    <p><strong>Надёжность:</strong> Это режим с аутентификацией (AEAD), что означает: злоумышленник не только не сможет прочитать данные, но и любое изменение зашифрованного текста будет обнаружено при расшифровке. Именно поэтому GCM <em>настоятельно рекомендуется</em> для использования в Web Crypto API. AES-GCM широко применяется в TLS 1.3, IPsec и современных стандартах связи.</p>
+    <p><strong>Особенность:</strong> Для шифрования нужен уникальный <em>nonce</em> (одноразовый номер). Никогда не используйте один и тот же nonce с одним ключом дважды — это фатальная ошибка. В нашем примере мы генерируем его через <code>crypto.getRandomValues()</code>.</p>
+  </div>
+
+  <!-- AES-CBC -->
+  <div class="algo-section">
+    <h4>AES-CBC <span class="badge badge-algo">Симметричный · Устаревший</span></h4>
+    <p><strong>История:</strong> CBC (Cipher Block Chaining) — один из старейших режимов блочного шифрования, описан ещё в 1976 году. Каждый блок открытого текста перед шифрованием объединяется по XOR с предыдущим зашифрованным блоком, что создаёт «цепочку».</p>
+    <p><strong>Надёжность:</strong> Сам по себе AES-CBC обеспечивает <em>конфиденциальность</em>, но <strong>не</strong> целостность. Злоумышленник может изменить зашифрованные данные, и вы не узнаете об этом. Классические атаки — padding oracle — позволяют расшифровывать данные при неправильной реализации. Web Crypto API <em>не добавляет</em> аутентификацию автоматически, поэтому CBC считается устаревшим для новых проектов.</p>
+    <p><strong>Когда использовать:</strong> Только для совместимости со старыми системами. Если есть выбор — используйте GCM.</p>
+  </div>
+
+  <!-- AES-CTR -->
+  <div class="algo-section">
+    <h4>AES-CTR <span class="badge badge-algo">Симметричный · Потоковый</span></h4>
+    <p><strong>История:</strong> CTR (Counter Mode) превращает блочный шифр AES в потоковый. Вместо шифрования самих данных шифруется счётчик, а результат XOR-ится с открытым текстом. Это позволяет обрабатывать данные произвольной длины без дополнения (padding).</p>
+    <p><strong>Надёжность:</strong> AES-CTR быстр и эффективен, но <strong>не обеспечивает аутентификацию</strong>. Если злоумышленник изменит бит в шифротексте, соответствующий бит открытого текста тоже изменится — и система не заметит подмены. Критически важно <em>никогда</em> не повторять счётчик с одним и тем же ключом: это раскрывает оба сообщения.</p>
+    <p><strong>Применение:</strong> Внутренние системы, где целостность контролируется другими средствами. Для публичных каналов — не лучший выбор.</p>
+  </div>
+
+  <!-- RSA-OAEP -->
+  <div class="algo-section">
+    <h4>RSA-OAEP <span class="badge badge-algo">Асимметричный · Гибридный</span></h4>
+    <p><strong>История:</strong> RSA был изобретён в 1977 году Ривестом, Шамиром и Адлеманом. OAEP (Optimal Asymmetric Encryption Padding) — схема дополнения, предложенная в 1994 году и стандартизированная в RFC 3447. Она добавляет случайность и защиту от атак на основе подобранного шифротекста.</p>
+    <p><strong>Надёжность:</strong> RSA-OAEP считается криптографически стойким при достаточной длине ключа (минимум 2048 бит). Однако он <strong>очень медленный</strong> и может зашифровать лишь ограниченный объём данных: например, ключ 2048 бит с SHA-256 позволяет зашифровать не более 190 байт. Поэтому RSA-OAEP обычно используют для шифрования <em>симметричного ключа</em>, а не самого сообщения — это называется гибридным шифрованием.</p>
+    <p><strong>В нашем демо:</strong> Для RSA-OAEP мы генерируем ключевую пару, шифруем текст публичным ключом и выводим результат. Это наглядно показывает ограничение по длине.</p>
+  </div>
+
+  <!-- Блок с кодом -->
+  <div class="mb-5">
+    <h2>Пример кода</h2>
+    <pre><code class="language-javascript hljs">// Web Crypto API — шифрование AES-GCM
+async function encryptAESGCM(plainText, password) {
+  const enc = new TextEncoder();
+
+  // 1. Импорт пароля как ключевого материала
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+
+  // 2. Произвольная соль (в реальности храните её рядом с шифротекстом)
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+
+  // 3. Получение AES-ключа через PBKDF2 (100 000 итераций)
+  const aesKey = await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+
+  // 4. Генерация nonce (12 байт для GCM)
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+
+  // 5. Шифрование
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: iv },
+    aesKey,
+    enc.encode(plainText)
+  );
+
+  return {
+    salt: btoa(String.fromCharCode(...salt)),
+    iv: btoa(String.fromCharCode(...iv)),
+    data: btoa(String.fromCharCode(...new Uint8Array(ciphertext)))
+  };
+}</code></pre>
+  </div>
+
+  <!-- Замечания -->
+  <div class="footer-note">
+    <p>⚠️ <strong>Важно:</strong> Web Crypto API работает только в безопасном контексте (HTTPS или localhost). Все операции выполняются асинхронно и возвращают <code>Promise</code>.</p>
+    <p>🔑 <strong>О PBKDF2:</strong> Мы используем PBKDF2 для превращения пароля в ключ. Чем больше итераций — тем медленнее подбор пароля злоумышленником. 100 000 итераций — современный минимум.</p>
+    <p>📦 <strong>Кодирование:</strong> Зашифрованные данные и параметры (соль, IV) кодируются в Base64 для удобного отображения. В реальном приложении их нужно передавать вместе с шифротекстом.</p>
+    <p>🧪 <strong>RSA-OAEP:</strong> Для демонстрации ключевая пара генерируется заново при каждом шифровании, а расшифрование выполняется тем же ключом в рамках одной сессии. В реальном приложении приватный ключ нужно хранить в защищённом хранилище.</p>
+  </div>
+
+</div>
+
+<!-- JS-библиотеки -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/languages/javascript.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+<script>
+  // ---------- Утилиты ----------
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+
+  function bufToBase64(buf) {
+    const bytes = new Uint8Array(buf);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  function base64ToBuf(b64) {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  function concatUint8(...arrays) {
+    const total = arrays.reduce((sum, arr) => sum + arr.length, 0);
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (const arr of arrays) {
+      result.set(arr, offset);
+      offset += arr.length;
+    }
+    return result;
+  }
+
+  async function deriveAESKey(password, salt, algoParams, keyUsages = ["encrypt", "decrypt"]) {
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(password),
+      "PBKDF2",
+      false,
+      ["deriveKey"]
+    );
+    return crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: salt,
+        iterations: 100000,
+        hash: "SHA-256"
+      },
+      keyMaterial,
+      algoParams,
+      false,
+      keyUsages
+    );
+  }
+
+  // ---------- Шифрование ----------
+  async function encryptAESGCM(plainText, password) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const aesKey = await deriveAESKey(password, salt, { name: "AES-GCM", length: 256 });
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: iv },
+      aesKey,
+      enc.encode(plainText)
+    );
+    const combined = concatUint8(salt, iv, new Uint8Array(ciphertext));
+    return bufToBase64(combined);
+  }
+
+  async function encryptAESCBC(plainText, password) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(16));
+    const aesKey = await deriveAESKey(password, salt, { name: "AES-CBC", length: 256 });
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: "AES-CBC", iv: iv },
+      aesKey,
+      enc.encode(plainText)
+    );
+    const combined = concatUint8(salt, iv, new Uint8Array(ciphertext));
+    return bufToBase64(combined);
+  }
+
+  async function encryptAESCTR(plainText, password) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const counter = crypto.getRandomValues(new Uint8Array(16));
+    const aesKey = await deriveAESKey(password, salt, { name: "AES-CTR", length: 256 });
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: "AES-CTR", counter: counter, length: 64 },
+      aesKey,
+      enc.encode(plainText)
+    );
+    const combined = concatUint8(salt, counter, new Uint8Array(ciphertext));
+    return bufToBase64(combined);
+  }
+
+  // RSA-OAEP — ключи хранятся в памяти на время сессии
+  let rsaKeyPair = null;
+  let rsaCiphertextB64 = null;
+
+  async function encryptRSAOAEP(plainText, password) {
+    // Генерируем новую пару при каждом шифровании
+    rsaKeyPair = await crypto.subtle.generateKey(
+      {
+        name: "RSA-OAEP",
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: "SHA-256"
+      },
+      true,
+      ["encrypt", "decrypt"]
+    );
+
+    try {
+      const ciphertext = await crypto.subtle.encrypt(
+        { name: "RSA-OAEP" },
+        rsaKeyPair.publicKey,
+        enc.encode(plainText)
+      );
+      rsaCiphertextB64 = bufToBase64(ciphertext);
+      return rsaCiphertextB64;
+    } catch (e) {
+      throw new Error(`RSA-OAEP может зашифровать не более ~190 байт. Текст слишком длинный (${enc.encode(plainText).length} байт).`);
+    }
+  }
+
+  // ---------- Расшифрование ----------
+  async function decryptAESGCM(cipherB64, password) {
+    const data = new Uint8Array(base64ToBuf(cipherB64));
+    const salt = data.slice(0, 16);
+    const iv = data.slice(16, 28);
+    const ciphertext = data.slice(28);
+
+    const aesKey = await deriveAESKey(password, salt, { name: "AES-GCM", length: 256 });
+    const plainBuf = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: iv },
+      aesKey,
+      ciphertext
+    );
+    return dec.decode(plainBuf);
+  }
+
+  async function decryptAESCBC(cipherB64, password) {
+    const data = new Uint8Array(base64ToBuf(cipherB64));
+    const salt = data.slice(0, 16);
+    const iv = data.slice(16, 32);
+    const ciphertext = data.slice(32);
+
+    const aesKey = await deriveAESKey(password, salt, { name: "AES-CBC", length: 256 });
+    const plainBuf = await crypto.subtle.decrypt(
+      { name: "AES-CBC", iv: iv },
+      aesKey,
+      ciphertext
+    );
+    return dec.decode(plainBuf);
+  }
+
+  async function decryptAESCTR(cipherB64, password) {
+    const data = new Uint8Array(base64ToBuf(cipherB64));
+    const salt = data.slice(0, 16);
+    const counter = data.slice(16, 32);
+    const ciphertext = data.slice(32);
+
+    const aesKey = await deriveAESKey(password, salt, { name: "AES-CTR", length: 256 });
+    const plainBuf = await crypto.subtle.decrypt(
+      { name: "AES-CTR", counter: counter, length: 64 },
+      aesKey,
+      ciphertext
+    );
+    return dec.decode(plainBuf);
+  }
+
+  async function decryptRSAOAEP(cipherB64, password) {
+    if (!rsaKeyPair) {
+      throw new Error("RSA-ключи не найдены. Сначала зашифруйте сообщение в этой сессии.");
+    }
+    if (rsaCiphertextB64 && cipherB64 !== rsaCiphertextB64) {
+      throw new Error("Этот шифротекст не соответствует текущей RSA-паре в памяти.");
+    }
+    const cipherBuf = base64ToBuf(cipherB64);
+    const plainBuf = await crypto.subtle.decrypt(
+      { name: "RSA-OAEP" },
+      rsaKeyPair.privateKey,
+      cipherBuf
+    );
+    return dec.decode(plainBuf);
+  }
+
+  // ---------- UI-логика ----------
+  const $ = (id) => document.getElementById(id);
+
+  function updateComparison() {
+    const orig = $('plainText').value;
+    const decrypted = $('plainOutput').textContent;
+    const box = $('comparison');
+    const cipherBox = $('cipherOutput');
+    const plainBox = $('plainOutput');
+
+    cipherBox.classList.remove('match', 'mismatch');
+    plainBox.classList.remove('match', 'mismatch');
+
+    if (decrypted === '—' || decrypted.trim() === '') {
+      box.className = 'comparison-status idle';
+      box.textContent = 'Ожидание расшифрования…';
+      return;
+    }
+
+    if (orig === decrypted) {
+      box.className = 'comparison-status ok';
+      box.textContent = '✅ Совпадает — шифрование и расшифрование успешны';
+      cipherBox.classList.add('match');
+      plainBox.classList.add('match');
+    } else {
+      box.className = 'comparison-status fail';
+      box.textContent = '❌ Не совпадает — проверьте пароль, алгоритм или целостность данных';
+      cipherBox.classList.add('mismatch');
+      plainBox.classList.add('mismatch');
+    }
+  }
+
+  // Шифрование
+  $('encryptBtn').addEventListener('click', async () => {
+    const plainText = $('plainText').value.trim();
+    const password = $('password').value;
+    const algo = $('algorithm').value;
+    const output = $('cipherOutput');
+    const status = $('status');
+
+    if (!plainText) { output.textContent = 'Введите текст'; return; }
+    if (!password) { output.textContent = 'Введите пароль'; return; }
+
+    output.textContent = '⏳ Шифрование...';
+    output.classList.remove('match', 'mismatch');
+    $('plainOutput').textContent = '—';
+    $('plainOutput').classList.remove('match', 'mismatch');
+    $('comparison').className = 'comparison-status idle';
+    $('comparison').textContent = 'Ожидание расшифрования…';
+    $('statusDec').textContent = '';
+    status.textContent = '';
+
+    try {
+      let result;
+      if (algo === 'AES-GCM') result = await encryptAESGCM(plainText, password);
+      else if (algo === 'AES-CBC') result = await encryptAESCBC(plainText, password);
+      else if (algo === 'AES-CTR') result = await encryptAESCTR(plainText, password);
+      else if (algo === 'RSA-OAEP') result = await encryptRSAOAEP(plainText, password);
+
+      output.textContent = result;
+      status.textContent = `✅ Зашифровано с ${algo}`;
+
+      // Синхронизируем форму расшифрования
+      $('algorithmDec').value = algo;
+      $('passwordDec').value = password;
+    } catch (err) {
+      output.textContent = '❌ ' + err.message;
+      status.textContent = '';
+    }
+  });
+
+  // Кнопка «вставить сверху»
+  $('copyBtn').addEventListener('click', () => {
+    const val = $('cipherOutput').textContent;
+    if (val && val !== '—' && !val.startsWith('⏳') && !val.startsWith('❌')) {
+      $('cipherInput').value = val;
+    }
+  });
+
+  // Расшифрование
+  $('decryptBtn').addEventListener('click', async () => {
+    const cipherB64 = $('cipherInput').value.trim();
+    const password = $('passwordDec').value;
+    const algo = $('algorithmDec').value;
+    const output = $('plainOutput');
+    const status = $('statusDec');
+
+    if (!cipherB64) { output.textContent = 'Введите шифротекст'; return; }
+    if (!password) { output.textContent = 'Введите пароль'; return; }
+
+    output.textContent = '⏳ Расшифрование...';
+    output.classList.remove('match', 'mismatch');
+    status.textContent = '';
+    $('comparison').className = 'comparison-status idle';
+    $('comparison').textContent = 'Ожидание расшифрования…';
+
+    try {
+      let result;
+      if (algo === 'AES-GCM') result = await decryptAESGCM(cipherB64, password);
+      else if (algo === 'AES-CBC') result = await decryptAESCBC(cipherB64, password);
+      else if (algo === 'AES-CTR') result = await decryptAESCTR(cipherB64, password);
+      else if (algo === 'RSA-OAEP') result = await decryptRSAOAEP(cipherB64, password);
+
+      output.textContent = result;
+      status.textContent = `✅ Расшифровано с ${algo}`;
+    } catch (err) {
+      output.textContent = '❌ ' + err.message;
+      status.textContent = '';
+    } finally {
+      updateComparison();
+    }
+  });
+
+  // Реактивное обновление сравнения при правках
+  $('plainText').addEventListener('input', updateComparison);
+  $('plainOutput').addEventListener('DOMSubtreeModified', updateComparison);
+
+  // Автозапуск при загрузке
+  window.addEventListener('load', () => {
+    $('encryptBtn').click();
+    setTimeout(() => {
+      $('copyBtn').click();
+      $('decryptBtn').click();
+    }, 400);
+  });
+</script>
+
+</body>
+</html>
