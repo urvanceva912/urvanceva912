@@ -1,101 +1,281 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Мой блог</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мой блог</title>
 
-<!-- Подключение CSS Bootstrap -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Подключение CSS Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-<!-- Highlight.js для подсветки синтаксиса (стили) -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/default.min.css">
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Скрипт VK Open API -->
-<script src="https://vk.ru/js/api/openapi.js?169" type="text/javascript"></script>
+  <!-- Highlight.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/default.min.css">
+
+  <!-- Скрипт VK Open API -->
+  <script src="https://vk.ru/js/api/openapi.js?169" type="text/javascript"></script>
+
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --surface: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --border: #e2e8f0;
+      --shadow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+    }
+
+    body {
+      background-color: var(--bg-color);
+      font-family: 'Inter', sans-serif;
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* Стеклянная навигация */
+    .navbar {
+      background: rgba(255, 255, 255, 0.7) !important;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+      box-shadow: var(--shadow-sm);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      padding: 1rem 0;
+    }
+    .navbar-brand {
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      transition: opacity 0.3s ease;
+    }
+    .navbar-brand:hover {
+      opacity: 0.8;
+    }
+    .avatar-img {
+      width: 55px;
+      height: 55px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .avatar-img:hover {
+      transform: scale(1.1) rotate(5deg);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3), var(--shadow-lg);
+    }
+
+    /* Блок последней публикации */
+    .hero-block {
+      background: linear-gradient(135deg, #1e1e2e, #2d2b55);
+      color: white;
+      border-radius: 24px !important;
+      padding: 3rem !important;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .hero-block::after {
+      content: '';
+      position: absolute;
+      top: -50%; left: 70%;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, rgba(255,255,255,0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .hero-block h1 {
+      font-weight: 800;
+      font-size: 2.5rem;
+      letter-spacing: -1px;
+      margin-bottom: 1rem;
+    }
+    .hero-block p {
+      font-size: 1.1rem;
+      color: #cbd5e1;
+      opacity: 0.9;
+    }
+    .read-more-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #ffffff;
+      text-decoration: none;
+      background: rgba(255,255,255,0.1);
+      padding: 0.75rem 1.25rem;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      margin-top: 1rem;
+    }
+    .read-more-link:hover {
+      background: rgba(255,255,255,0.2);
+      gap: 0.75rem;
+      color: #ffffff;
+    }
+
+    /* Заголовки разделов */
+    .section-title {
+      font-weight: 800;
+      color: var(--text-main);
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-title::before {
+      content: '';
+      display: block;
+      width: 4px; 
+      height: 24px;
+      background: linear-gradient(to bottom, #6366f1, #a855f7);
+      border-radius: 4px;
+    }
+
+    /* Блок комментариев VK */
+    .vk-container {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+
+    /* Элементы архива */
+    .archive-list {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 1rem;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+    .archive-item {
+      transition: background-color 0.2s ease, transform 0.2s ease;
+      border-radius: 12px;
+      padding: 1rem !important;
+      border-top: none !important;
+      border-bottom: 1px solid var(--border);
+    }
+    .archive-list li:last-child .archive-item {
+      border-bottom: none;
+    }
+    .archive-item:hover {
+      background-color: var(--bg-color);
+      transform: translateX(4px);
+    }
+    .archive-item h6 {
+      font-weight: 700;
+      color: var(--text-main);
+      font-size: 1.05rem;
+    }
+    .archive-item small {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .archive-img {
+      border-radius: 12px !important;
+      box-shadow: var(--shadow-sm);
+    }
+  </style>
 </head>
 <body>
 
 <!-- Панель навигации -->
-<nav class="navbar bg-body-tertiary mb-4">
-<div class="container d-flex justify-content-between align-items-center w-100">
-<a class="navbar-brand" href="/">Главная</a>
+<nav class="navbar mb-4">
+  <div class="container d-flex justify-content-between align-items-center w-100">
+    <a class="navbar-brand" href="/">Мой блог</a>
 
-<!-- Аватар справа -->
-<img src="https://avatars.mds.yandex.net/i?id=e2dbf0eea03d887a95a6b2a5b1cfe7a35112f997-5243585-images-thumbs&n=13" alt="Аватар пользователя" style="
-width: 60px;
-height: 60px;
-border-radius: 50%;
-object-fit: cover;
-display: block;
-border: 3px solid #fff;
-box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-">
-</div>
+    <!-- Аватар -->
+    <img src="https://avatars.mds.yandex.net/i?id=e2dbf0eea03d887a95a6b2a5b1cfe7a35112f997-5243585-images-thumbs&n=13" alt="Аватар пользователя" class="avatar-img">
+  </div>
 </nav>
 
 <!-- Главный контейнер сетки -->
-<div class="container my-4">
-<div class="row align-items-start">
+<div class="container my-4 pb-5">
+  <div class="row align-items-start g-4">
 
-<!-- ЛЕВАЯ КОЛОНКА (Ширина 8 из 12): Последняя публикация -->
-<div class="col-12 col-md-8">
-<h3 class="fw-bold mb-3">Последняя публикация</h3>
+    <!-- ЛЕВАЯ КОЛОНКА -->
+    <div class="col-12 col-md-8">
+      <h3 class="section-title">Последняя публикация</h3>
 
-<!-- Главный блок поста (черный фон, укороченный заголовок) -->
- <div class="p-4 p-md-5 mb-4 rounded text-bg-dark">
-    <h1 class="display-4 fst-italic">window.crypto</h1>
-    <p class="lead my-3">Обзор алгоритмов шифрования в браузере: AES-GCM, CBC, CTR и RSA-OAEP через Web Crypto API.</p>
-    <a href="post14102026.html" class="text-white fw-bold">Читать полностью →</a>
+      <!-- Главный блок поста -->
+      <div class="mb-5 hero-block">
+        <h1 class="display-4">server.js</h1>
+        <p class="lead my-3">REST API на Node.js + SQLite. Подробный разбор устройства сервера из одного файла без внешних npm-пакетов.</p>
+        <a href="post07112026.html" class="fw-bold read-more-link">Читать полностью →</a>
+      </div>
+
+      <!-- Виджет комментариев VK -->
+      <div class="mt-4 vk-container">
+        <h4 class="section-title mb-4">Комментарии</h4>
+        <div id="vk_comments"></div>
+        <script type="text/javascript">
+          VK.init({ apiId: 54799909, onlyWidgets: true });
+          VK.Widgets.Comments('vk_comments', { limit: 10, attach: "*" });
+        </script>
+      </div>
+    </div>
+
+    <!-- ПРАВАЯ КОЛОНКА: Архив -->
+    <div class="col-12 col-md-4">
+      <h3 class="section-title">Архив</h3>
+
+      <ul class="list-unstyled archive-list">
+        <li>
+          <a class="archive-item d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center link-body-emphasis text-decoration-none" href="post17092026.html">
+            <img src="https://avatars.mds.yandex.net/get-shedevrum/12368819/img_f56a1fe0136411ef925c9a79ffaf5bd2/orig" width="90" height="86" class="archive-img flex-shrink-0 object-fit-cover" alt="Занятие 17.09.2026">
+            <div>
+              <h6 class="mb-1">№1 SQLite3</h6>
+              <small>September 17, 2026</small>
+            </div>
+          </a>
+        </li>
+        <li>
+          <a class="archive-item d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center link-body-emphasis text-decoration-none" href="post01102026.html">
+            <img src="https://static.vecteezy.com/system/resources/previews/047/374/457/non_2x/hospital-building-icon-with-trees-isolated-on-white-background-medical-clinic-flat-illustration-health-care-concept-vector.jpg" width="90" height="86" class="archive-img flex-shrink-0 object-fit-cover" alt="Занятие 01.10.2026">
+            <div>
+              <h6 class="mb-1">№2 SQLite3</h6>
+              <small>October 01, 2026</small>
+            </div>
+          </a>
+        </li>
+        <li>
+          <a class="archive-item d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center link-body-emphasis text-decoration-none" href="post14102026.html">
+            <img src="https://www.tgu-dpo.ru/wp-content/uploads/2026/06/kriptografiya-prostymi-slovami-zamok-klyuchi-1024x572.jpg" width="90" height="86" class="archive-img flex-shrink-0 object-fit-cover" alt="Занятие 14.10.2026">
+            <div>
+              <h6 class="mb-1">№3 window.crypto</h6>
+              <small>October 14, 2026</small>
+            </div>
+          </a>
+        </li>
+        <li>
+          <a class="archive-item d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center link-body-emphasis text-decoration-none" href="post07112026.html">
+            <img src="https://cdn-icons-png.flaticon.com/512/919/919832.png" width="90" height="86" class="archive-img flex-shrink-0 object-fit-cover" alt="Занятие 07.11.2026">
+            <div>
+              <h6 class="mb-1">№4 server.js API</h6>
+              <small>November 07, 2026</small>
+            </div>
+          </a>
+        </li>
+      </ul>
+    </div>
+
   </div>
-
-<!-- Виджет комментариев VK -->
-<div class="mt-4">
-<h4 class="fw-bold mb-3">Комментарии</h4>
-<div id="vk_comments"></div>
-<script type="text/javascript">
-VK.init({ apiId: 54799909, onlyWidgets: true });
-VK.Widgets.Comments('vk_comments', { limit: 10, attach: "*" });
-</script>
-</div>
 </div>
 
-<!-- ПРАВАЯ КОЛОНКА (Ширина 4 из 12): Архив -->
-<div class="col-12 col-md-4">
-<h3 class="fw-bold mb-3">Архив</h3>
-
-<ul class="list-unstyled">
-<li>
-<a class="d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center py-3 link-body-emphasis text-decoration-none border-top" href="post17092026.html">
-<img src="https://avatars.mds.yandex.net/get-shedevrum/12368819/img_f56a1fe0136411ef925c9a79ffaf5bd2/orig" width="100" height="96" class="rounded flex-shrink-0 object-fit-cover" alt="Занятие 17.09.2026">
-<div>
-<h6 class="mb-0">№1 SQLite3</h6>
-<small class="text-body-secondary">September 17, 2026</small>
-</div>
-</a>
-</li>
-<li>
-<a class="d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center py-3 link-body-emphasis text-decoration-none border-top" href="post01102026.html">
-<img src="https://static.vecteezy.com/system/resources/previews/047/374/457/non_2x/hospital-building-icon-with-trees-isolated-on-white-background-medical-clinic-flat-illustration-health-care-concept-vector.jpg" width="100" height="96" class="rounded flex-shrink-0 object-fit-cover" alt="Занятие 01.10.2026">
-<div>
-<h6 class="mb-0">№2 SQLite3</h6>
-<small class="text-body-secondary">October 01, 2026</small>
-</div>
-</a>
-</li>
-<li>
-<a class="d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center py-3 link-body-emphasis text-decoration-none border-top" href="post14102026.html">
-<img src="https://www.tgu-dpo.ru/wp-content/uploads/2026/06/kriptografiya-prostymi-slovami-zamok-klyuchi-1024x572.jpg" width="100" height="96" class="rounded flex-shrink-0 object-fit-cover" alt="Занятие 14.10.2026">
-<div>
-<h6 class="mb-0">№3 window.crypto</h6>
-<small class="text-body-secondary">October 14, 2026</small>
-</div>
-</a>
-</li>
-</ul>
-</div>
-
-</div>
-</div>
-
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
