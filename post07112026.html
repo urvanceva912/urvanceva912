@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>server.js — REST API на Node.js + SQLite</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Highlight.js — тема One Dark -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/atom-one-dark.min.css">
+
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --surface: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --border: #e2e8f0;
+      --shadow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+    }
+
+    body {
+      background-color: var(--bg-color);
+      font-family: 'Inter', sans-serif;
+      color: var(--text-main);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* ── Стеклянная навигация (Glassmorphism) ── */
+    .navbar {
+      background: rgba(255, 255, 255, 0.7) !important;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+      box-shadow: var(--shadow-sm);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      padding: 1rem 0;
+    }
+    .navbar-brand {
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      transition: opacity 0.3s ease;
+    }
+    .navbar-brand:hover {
+      opacity: 0.8;
+    }
+    .avatar-img {
+      width: 55px;
+      height: 55px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .avatar-img:hover {
+      transform: scale(1.1) rotate(5deg);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3), var(--shadow-lg);
+    }
+
+    /* ── Главный блок (Hero) ── */
+    .hero-block {
+      background: var(--surface);
+      border-radius: 24px;
+      padding: 4rem 3rem !important;
+      margin-top: 2rem;
+      margin-bottom: 3rem !important;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-block::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: 80%;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, rgba(255,255,255,0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .hero-block h1 {
+      font-weight: 800;
+      font-size: 2.75rem;
+      letter-spacing: -1px;
+      color: var(--text-main);
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+    }
+    .hero-block p.lead { 
+      font-size: 1.15rem; 
+      color: var(--text-muted); 
+      max-width: 800px;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      margin-top: 1.5rem;
+      transition: gap 0.3s ease, color 0.3s ease;
+      background: rgba(99, 102, 241, 0.1);
+      padding: 0.75rem 1.25rem;
+      border-radius: 12px;
+    }
+    .back-link:hover { 
+      gap: 0.75rem; 
+      color: var(--accent-hover);
+      background: rgba(99, 102, 241, 0.15);
+    }
+
+    /* ── Основной контент ── */
+    .content-section {
+      background: transparent;
+      padding: 0 1rem;
+    }
+    
+    h2 {
+      font-weight: 800;
+      color: var(--text-main);
+      margin-top: 3.5rem;
+      margin-bottom: 1.5rem;
+      font-size: 1.8rem;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    h2::before {
+      content: '';
+      display: block;
+      width: 5px; 
+      height: 28px;
+      background: linear-gradient(to bottom, #6366f1, #a855f7);
+      border-radius: 6px;
+    }
+    h2:first-child { margin-top: 0; }
+    
+    h3 {
+      font-weight: 700;
+      color: #334155;
+      margin-top: 2.5rem;
+      margin-bottom: 1rem;
+      font-size: 1.35rem;
+    }
+    
+    p { font-size: 1.05rem; color: #334155; }
+    ul, ol { font-size: 1.05rem; color: #334155; padding-left: 1.5rem; }
+    li { margin-bottom: 0.5rem; }
+
+    /* ── Оглавление (Сайдбар) ── */
+    .toc-wrapper {
+      position: sticky;
+      top: 100px;
+      background: var(--surface);
+      padding: 2rem;
+      border-radius: 20px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+    .toc-wrapper h5 {
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 1.25rem;
+      font-size: 1.15rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 0.85rem;
+    }
+    .toc-wrapper ol {
+      padding-left: 0;
+      list-style: none;
+      margin: 0;
+    }
+    .toc-wrapper li { margin-bottom: 0.5rem; }
+    .toc-wrapper a {
+      color: var(--text-muted);
+      text-decoration: none;
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      padding: 0.4rem 0.75rem;
+      border-radius: 8px;
+      margin-left: -0.75rem;
+    }
+    .toc-wrapper a:hover {
+      color: var(--accent);
+      background: #f1f5f9;
+      transform: translateX(4px);
+    }
+
+    /* ── Блоки кода в стиле macOS ── */
+    .code-window {
+      background-color: #1e1e2e;
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      margin: 2rem 0;
+      position: relative;
+      overflow: hidden; /* Обрезаем скругленные углы */
+    }
+    /* Три точки в стиле окна macOS */
+    .code-window::before {
+      content: '';
+      position: absolute;
+      top: 1rem;
+      left: 1.25rem;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ff5f56;
+      box-shadow: 20px 0 0 #ffbd2e, 40px 0 0 #27c93f;
+      z-index: 2;
+    }
+    pre {
+      margin: 0;
+      padding: 1.5rem;
+      padding-top: 3.5rem;
+      overflow-x: auto; /* Горизонтальный скролл */
+      color: #e2e8f0 !important;
+      background: transparent;
+      -webkit-overflow-scrolling: touch;
+    }
+    pre code {
+      color: #e2e8f0;
+    }
+    pre code.hljs {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      padding: 0;
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      color: #abb2bf;
+    }
+
+    /* ── Таблица эндпоинтов ── */
+    .table-responsive {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 1rem;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      overflow-x: auto; /* Включаем горизонтальный скролл контейнера */
+      -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+    }
+    .table { 
+      margin-bottom: 0; 
+      min-width: 550px; /* Принудительная ширина, чтобы таблица не сжималась на телефонах */
+    }
+    .table th {
+      background-color: transparent;
+      border-bottom: 2px solid var(--border);
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 0.5px;
+      padding: 1rem;
+      white-space: nowrap; /* Запрет переноса заголовков */
+    }
+    .table td {
+      padding: 1rem;
+      vertical-align: middle;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap; /* Запрет переноса текста в ячейках */
+    }
+    .table tbody tr:last-child td { border-bottom: none; }
+    
+    .endpoint-table code { 
+      background: #f1f5f9; 
+      color: #0f172a; 
+      font-size: 0.9rem;
+      padding: 0.3rem 0.5rem;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Красивые бейджи для методов */
+    .badge-method { 
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      padding: 0.5em 0.8em;
+      border-radius: 8px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .text-bg-success { background: #dcfce7 !important; color: #166534 !important; }
+    .text-bg-primary { background: #dbeafe !important; color: #1e40af !important; }
+    .text-bg-warning { background: #fef9c3 !important; color: #854d0e !important; }
+    .text-bg-danger  { background: #fee2e2 !important; color: #991b1b !important; }
+
+    /* Inline код в тексте */
+    p code, li code {
+      background: #f1f5f9;
+      color: #eb4899;
+      padding: 0.2rem 0.4rem;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Навигация ──────────────────────────────────────────────────────── -->
+<nav class="navbar mb-4">
+  <div class="container d-flex justify-content-between align-items-center w-100">
+    <a class="navbar-brand" href="https://urvanceva912.github.io/urvanceva912/">Мой блог</a>
+    <img src="https://avatars.mds.yandex.net/i?id=e2dbf0eea03d887a95a6b2a5b1cfe7a35112f997-5243585-images-thumbs&amp;n=13" alt="Аватар" class="avatar-img">
+  </div>
+</nav>
+
+<div class="container pb-5">
+
+  <!-- ── Hero ──────────────────────────────────────────────────────────── -->
+  <div class="hero-block">
+    <h1>server.js — REST API на Node.js + SQLite</h1>
+    <p class="lead">
+      Подробный разбор устройства сервера из одного файла: от подключения к базе через
+      <code>node:sqlite</code> до маршрутизации HTTP-запросов и отдачи JSON.
+      Никаких npm-пакетов — только встроенные модули Node.js&nbsp;≥&nbsp;22.5.
+    </p>
+    <a href="./" class="back-link">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Главная страница
+    </a>
+  </div>
+
+  <div class="row">
+    <!-- ── Содержание (Сайдбар) ──────────────────────────────────────────── -->
+    <div class="col-lg-3 mb-4 d-none d-lg-block">
+      <div class="toc-wrapper">
+        <h5>Содержание</h5>
+        <ol>
+          <li><a href="#overview">Что делает <code>server.js</code></a></li>
+          <li><a href="#init">Инициализация БД</a></li>
+          <li><a href="#schema">Схема таблиц</a></li>
+          <li><a href="#seed">Автозаполнение</a></li>
+          <li><a href="#stmts">SQL-запросы</a></li>
+          <li><a href="#helpers">Хелперы</a></li>
+          <li><a href="#handlers">Обработчики</a></li>
+          <li><a href="#server">Сервер и CORS</a></li>
+          <li><a href="#run">Запуск</a></li>
+          <li><a href="#endpoints">Эндпоинты</a></li>
+          <li><a href="#examples">Примеры</a></li>
+          <li><a href="#markup">Разметка</a></li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- ── Контент ───────────────────────────────────────────────────────── -->
+    <div class="col-lg-9">
+      <div class="content-section">
+        
+        <!-- ── 1. Обзор ── -->
+        <h2 id="overview">1. Что делает server.js</h2>
+        <p>
+          <code>server.js</code> — это HTTP-сервер на встроенном модуле <code>node:http</code>, который
+          реализует REST-API по образцу <a href="https://jsonplaceholder.typicode.com/" target="_blank" class="text-primary text-decoration-none">JSONPlaceholder</a>.
+          Он предоставляет три ресурса — <strong>users</strong>, <strong>posts</strong>, <strong>comments</strong> — и
+          хранит данные в локальном файле SQLite (<code>api.db</code>).
+        </p>
+        <p>Ключевые особенности реализации:</p>
+        <ul>
+          <li>Драйвер <code>node:sqlite</code> (встроенный в Node.js с версии 22.5) — <strong>не требует</strong> <code>npm install</code>;</li>
+          <li>Файл базы создаётся рядом со скриптом и сохраняется между перезапусками;</li>
+          <li>Включены <code>WAL</code> (журналирование) и <code>foreign_keys</code> (каскадное удаление);</li>
+          <li>Поддерживаются методы <code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>PATCH</code>, <code>DELETE</code> и <code>OPTIONS</code> (CORS preflight);</li>
+          <li>Один файл, ноль внешних зависимостей.</li>
+        </ul>
+
+        <!-- ── 2. Инициализация ── -->
+        <h2 id="init">2. Инициализация базы данных</h2>
+        <p>
+          Первые строки файла подключают два встроенных модуля Node.js и открывают соединение с базой.
+          <code>DatabaseSync</code> — синхронный драйвер: каждая операция сразу возвращает результат,
+          без <code>await</code>.
+        </p>
+        <div class="code-window">
+          <pre><code class="language-javascript">import { createServer } from 'node:http';
+import { DatabaseSync } from 'node:sqlite';
+
+const db = new DatabaseSync('api.db');
+db.exec('PRAGMA journal_mode = WAL;');
+db.exec('PRAGMA foreign_keys = ON;');</code></pre>
+        </div>
+        <p>Что означают два <code>PRAGMA</code>:</p>
+        <ul>
+          <li><strong><code>journal_mode = WAL</code></strong> — режим Write-Ahead Logging. Быстрее, чем журнал по умолчанию, и позволяет читать базу во время записи;</li>
+          <li><strong><code>foreign_keys = ON</code></strong> — включает проверку внешних ключей. Без этой строки <code>ON DELETE CASCADE</code> в схеме работать не будет.</li>
+        </ul>
+
+        <!-- ── 3. Схема ── -->
+        <h2 id="schema">3. Схема таблиц</h2>
+        <p>
+          Все три таблицы создаются одним вызовом <code>db.exec()</code> с конструкцией
+          <code>CREATE TABLE IF NOT EXISTS</code> — значит, повторный запуск сервера ничего не сломает.
+        </p>
+        <div class="code-window">
+          <pre><code class="language-sql">CREATE TABLE IF NOT EXISTS users (
+  id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  name     TEXT NOT NULL,
+  username TEXT NOT NULL,
+  email    TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS posts (
+  id     INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title  TEXT NOT NULL,
+  body   TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS comments (
+  id     INTEGER PRIMARY KEY AUTOINCREMENT,
+  postId INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  name   TEXT NOT NULL,
+  email  TEXT NOT NULL,
+  body   TEXT NOT NULL
+);</code></pre>
+        </div>
+        <p>Связи между таблицами:</p>
+        <ul>
+          <li><code>posts.userId &rarr; users.id</code> — один пользователь пишет много постов;</li>
+          <li><code>comments.postId &rarr; posts.id</code> — у одного поста много комментариев;</li>
+          <li><code>ON DELETE CASCADE</code> — удаление пользователя автоматически уносит его посты и комментарии к ним.</li>
+        </ul>
+
+        <!-- ── 4. Seeding ── -->
+        <h2 id="seed">4. Автозаполнение (seeding)</h2>
+        <p>
+          Если таблица <code>users</code> пуста, скрипт заполняет её тестовыми данными —
+          10 пользователей, 100 постов, 300 комментариев. Это даёт «из коробки» поведение,
+          похожее на JSONPlaceholder.
+        </p>
+        <div class="code-window">
+          <pre><code class="language-javascript">if (db.prepare('SELECT COUNT(*) AS c FROM users').get().c === 0) {
+  const insUser = db.prepare('INSERT INTO users (name, username, email) VALUES (?, ?, ?)');
+  const insPost = db.prepare('INSERT INTO posts (userId, title, body) VALUES (?, ?, ?)');
+  const insCmnt = db.prepare('INSERT INTO comments (postId, name, email, body) VALUES (?, ?, ?, ?)');
+
+  db.exec('BEGIN');
+  try {
+    for (let i = 1; i &lt;= 10; i++)
+      insUser.run(`User ${i}`, `user${i}`, `user${i}@example.com`);
+
+    for (let i = 1; i &lt;= 100; i++)
+      insPost.run(((i - 1) % 10) + 1, `Post ${i} title`, `Post ${i} body`);
+
+    for (let i = 1; i &lt;= 300; i++)
+      insCmnt.run(((i - 1) % 100) + 1, `Commenter ${i}`, `c${i}@example.com`, `Comment ${i} body`);
+
+    db.exec('COMMIT');
+    console.log('DB seeded');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+}</code></pre>
+        </div>
+        <p>
+          Вставка обёрнута в транзакцию (<code>BEGIN … COMMIT</code>): если что-то упадёт
+          в середине, все изменения откатятся через <code>ROLLBACK</code>. Это заметно быстрее,
+          чем 410 отдельных <code>INSERT</code>, каждый из которых сам по себе — транзакция.
+        </p>
+
+        <!-- ── 5. Подготовленные запросы ── -->
+        <h2 id="stmts">5. Подготовленные SQL-запросы</h2>
+        <p>
+          Все запросы, которые нужны обработчикам, готовятся один раз при старте и складываются
+          в объект <code>stmt</code>. SQLite компилирует такой запрос при подготовке и потом
+          выполняет его повторно — быстрее и безопаснее (параметры передаются через <code>?</code>,
+          а не склейкой строк — защита от SQL-инъекций).
+        </p>
+        <div class="code-window">
+          <pre><code class="language-javascript">const stmt = {
+  users: {
+    all:    db.prepare('SELECT * FROM users'),
+    byId:   db.prepare('SELECT * FROM users WHERE id = ?'),
+    insert: db.prepare('INSERT INTO users (name, username, email) VALUES (?, ?, ?)'),
+    update: db.prepare(`UPDATE users
+      SET name     = COALESCE(?, name),
+          username = COALESCE(?, username),
+          email    = COALESCE(?, email)
+      WHERE id = ?`),
+    del:    db.prepare('DELETE FROM users WHERE id = ?'),
+  },
+  posts: {
+    all:    db.prepare('SELECT * FROM posts'),
+    byId:   db.prepare('SELECT * FROM posts WHERE id = ?'),
+    byUser: db.prepare('SELECT * FROM posts WHERE userId = ?'),
+    insert: db.prepare('INSERT INTO posts (userId, title, body) VALUES (?, ?, ?)'),
+    update: db.prepare(`UPDATE posts
+      SET userId = COALESCE(?, userId),
+          title  = COALESCE(?, title),
+          body   = COALESCE(?, body)
+      WHERE id = ?`),
+    del:    db.prepare('DELETE FROM posts WHERE id = ?'),
+  },
+  comments: {
+    all:    db.prepare('SELECT * FROM comments'),
+    byId:   db.prepare('SELECT * FROM comments WHERE id = ?'),
+    byPost: db.prepare('SELECT * FROM comments WHERE postId = ?'),
+    insert: db.prepare('INSERT INTO comments (postId, name, email, body) VALUES (?, ?, ?, ?)'),
+    del:    db.prepare('DELETE FROM comments WHERE id = ?'),
+  },
+};</code></pre>
+        </div>
+        <p>
+          Обратите внимание на <code>COALESCE(?, name)</code> в запросах <code>update</code>.
+          Это реализация семантики <code>PATCH</code>: если клиент прислал <code>null</code> для поля,
+          в базу уйдёт старое значение. Так можно обновлять только те поля, которые реально хочется изменить.
+        </p>
+
+        <!-- ── 6. Хелперы ── -->
+        <h2 id="helpers">6. Вспомогательные функции</h2>
+        <p>Две функции, которые используются во всех обработчиках:</p>
+        <h3><code>sendJSON(res, status, data)</code></h3>
+        <p>
+          Сериализует объект в JSON, ставит правильные заголовки (<code>Content-Type</code>,
+          <code>Content-Length</code>) и завершает ответ.
+        </p>
+        <div class="code-window">
+          <pre><code class="language-javascript">function sendJSON(res, status, data) {
+  const body = JSON.stringify(data);
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Length': Buffer.byteLength(body),
+  });
+  res.end(body);
+}</code></pre>
+        </div>
+        <h3><code>readBody(req)</code></h3>
+        <p>
+          Читает тело запроса как поток (chunk'ами), собирает строку, парсит JSON.
+          Возвращает Promise, потому что события <code>data</code> и <code>end</code> асинхронны.
+        </p>
+        <div class="code-window">
+          <pre><code class="language-javascript">function readBody(req) {
+  return new Promise((resolve, reject) =&gt; {
+    let data = '';
+    req.on('data', (c) =&gt; (data += c));
+    req.on('end', () =&gt; {
+      if (!data) return resolve({});
+      try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
+    });
+    req.on('error', reject);
+  });
+}</code></pre>
+        </div>
+
+        <!-- ── 7. Обработчики ── -->
+        <h2 id="handlers">7. Обработчики ресурсов</h2>
+        <p>
+          Каждый ресурс обслуживается своей асинхронной функцией. Внутри — проверка метода и пути,
+          вызов подготовленного запроса и отправка JSON-ответа. Разберём один обработчик — <code>handlePosts</code>,
+          остальные два (<code>handleUsers</code>, <code>handleComments</code>) устроены аналогично.
+        </p>
+        <div class="code-window">
+          <pre><code class="language-javascript">async function handlePosts(req, res, parts, method, search) {
+  const id = parts[1] ? Number(parts[1]) : null;
+  const userId = search.get('userId');
+
+  // GET /posts?userId=2
+  if (method === 'GET' &amp;&amp; !id &amp;&amp; userId)
+    return sendJSON(res, 200, stmt.posts.byUser.all(Number(userId)));
+
+  // GET /posts
+  if (method === 'GET' &amp;&amp; !id)
+    return sendJSON(res, 200, stmt.posts.all.all());
+
+  // GET /posts/:id
+  if (method === 'GET' &amp;&amp; id) {
+    const p = stmt.posts.byId.get(id);
+    return p ? sendJSON(res, 200, p) : sendJSON(res, 404, {});
+  }
+
+  // POST /posts
+  if (method === 'POST') {
+    const b = await readBody(req);
+    if (!b.userId || !b.title || !b.body)
+      return sendJSON(res, 400, { error: 'userId, title, body required' });
+    const info = stmt.posts.insert.run(b.userId, b.title, b.body);
+    return sendJSON(res, 201, stmt.posts.byId.get(info.lastInsertRowid));
+  }
+
+  // PUT /posts/:id и PATCH /posts/:id
+  if ((method === 'PUT' || method === 'PATCH') &amp;&amp; id) {
+    const b = await readBody(req);
+    const info = stmt.posts.update.run(
+      b.userId ?? null, b.title ?? null, b.body ?? null, id
+    );
+    return info.changes
+      ? sendJSON(res, 200, stmt.posts.byId.get(id))
+      : sendJSON(res, 404, {});
+  }
+
+  // DELETE /posts/:id
+  if (method === 'DELETE' &amp;&amp; id) {
+    const info = stmt.posts.del.run(id);
+    return sendJSON(res, info.changes ? 200 : 404, {});
+  }
+
+  // всё остальное — 405
+  sendJSON(res, 405, { error: 'Method not allowed' });
+}</code></pre>
+        </div>
+        <p>Ключевые детали:</p>
+        <ul>
+          <li><code>parts[1]</code> — второй сегмент URL. Для <code>/posts/5</code> это <code>"5"</code>, приводим к числу;</li>
+          <li><code>search.get('userId')</code> — параметр из строки запроса (<code>?userId=2</code>);</li>
+          <li><code>info.lastInsertRowid</code> — id только что созданной записи (для ответа 201);</li>
+          <li><code>info.changes</code> — сколько строк реально изменилось. <code>0</code> значит «нет такой записи» → 404;</li>
+          <li><code>b.field ?? null</code> — если поля нет, передаём <code>null</code>, чтобы <code>COALESCE</code> оставил старое значение.</li>
+        </ul>
+
+        <!-- ── 8. HTTP-сервер ── -->
+        <h2 id="server">8. HTTP-сервер и CORS</h2>
+        <p>
+          Корневой обработчик — <code>createServer(async (req, res) =&gt; {...})</code>. Он делает три вещи:
+          ставит CORS-заголовки, разбирает URL на сегменты и передаёт управление нужному обработчику ресурса.
+        </p>
+        <div class="code-window">
+          <pre><code class="language-javascript">const server = createServer(async (req, res) =&gt; {
+  // CORS — чтобы фронтенд с другого домена мог обращаться к API
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+
+  const url   = new URL(req.url, `http://${req.headers.host}`);
+  const parts = url.pathname.split('/').filter(Boolean);
+  const { method } = req;
+
+  try {
+    // Корень / — JSON-оглавление API
+    if (parts.length === 0) {
+      return sendJSON(res, 200, {
+        name: 'SQLite Blog API',
+        version: '1.0',
+        endpoints: ['/users', '/posts', '/comments'],
+      });
+    }
+
+    // Браузер сам дёргает /favicon.ico — тихо отвечаем 204
+    if (parts[0] === 'favicon.ico') { res.writeHead(204); return res.end(); }
+
+    // Маршрутизация по ресурсу
+    if (parts[0] === 'users')    return await handleUsers(req, res, parts, method);
+    if (parts[0] === 'posts')    return await handlePosts(req, res, parts, method, url.searchParams);
+    if (parts[0] === 'comments') return await handleComments(req, res, parts, method, url.searchParams);
+
+    sendJSON(res, 404, { error: 'Not found' });
+  } catch (err) {
+    console.error(err);
+    sendJSON(res, 500, { error: err.message });
+  }
+});
+
+server.listen(3000, '127.0.0.1', () =&gt; {
+  console.log('API: http://127.0.0.1:3000');
+});</code></pre>
+        </div>
+        <p>
+          <code>url.pathname.split('/').filter(Boolean)</code> превращает <code>/posts/5</code>
+          в <code>["posts", "5"]</code>, а <code>/</code> — в <code>[]</code>. Это даёт простую и понятную
+          маршрутизацию без сторонних библиотек.
+        </p>
+
+        <!-- ── 9. Запуск ── -->
+        <h2 id="run">9. Запуск</h2>
+        <p>Проверьте версию Node.js — нужна <strong>22.5 или выше</strong>:</p>
+        <div class="code-window">
+          <pre><code class="language-bash">node -v</code></pre>
+        </div>
+        <p>Перейдите в папку со скриптом и запустите:</p>
+        <div class="code-window">
+          <pre><code class="language-bash">cd "D:\Мои документы\...\Зубарева Урванцева ИР-41"
+node --no-warnings server.mjs</code></pre>
+        </div>
+        <p>В консоли появится:</p>
+        <div class="code-window">
+          <pre><code class="language-plaintext">DB seeded
+API: http://127.0.0.1:3000</code></pre>
+        </div>
+        <p>
+          Флаг <code>--no-warnings</code> скрывает безвредное сообщение
+          <code>ExperimentalWarning: SQLite is an experimental feature</code>.
+          Рядом со скриптом появится файл <code>api.db</code> — ваша база.
+        </p>
+
+        <!-- ── 10. Эндпоинты ── -->
+        <h2 id="endpoints">10. Список эндпоинтов</h2>
+        <div class="table-responsive mb-5">
+          <table class="table align-middle endpoint-table border-0">
+            <thead>
+              <tr><th>Метод</th><th>Путь</th><th>Что делает</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="badge text-bg-success badge-method">GET</span></td>   <td><code>/users</code></td>               <td>все пользователи</td></tr>
+              <tr><td><span class="badge text-bg-success badge-method">GET</span></td>   <td><code>/users/:id</code></td>           <td>один пользователь</td></tr>
+              <tr><td><span class="badge text-bg-success badge-method">GET</span></td>   <td><code>/users/:id/posts</code></td>     <td>посты пользователя</td></tr>
+              <tr><td><span class="badge text-bg-primary badge-method">POST</span></td>  <td><code>/users</code></td>               <td>создать пользователя</td></tr>
+              <tr><td><span class="badge text-bg-warning badge-method">PATCH</span></td> <td><code>/users/:id</code></td>           <td>обновить поля</td></tr>
+              <tr><td><span class="badge text-bg-danger  badge-method">DELETE</span></td><td><code>/users/:id</code></td>           <td>удалить (каскадно)</td></tr>
+              <tr><td><span class="badge text-bg-success badge-method">GET</span></td>   <td><code>/posts</code></td>               <td>все посты</td></tr>
+              <tr><td><span class="badge text-bg-success badge-method">GET</span></td>   <td><code>/posts?userId=2</code></td>      <td>посты пользователя №2</td></tr>
+              <tr><td><span class="badge text-bg-success badge-method">GET</span></td>   <td><code>/posts/:id</code></td>           <td>один пост</td></tr>
+              <tr><td><span class="badge text-bg-primary badge-method">POST</span></td>  <td><code>/posts</code></td>               <td>создать пост</td></tr>
+              <tr><td><span class="badge text-bg-warning badge-method">PATCH</span></td> <td><code>/posts/:id</code></td>           <td>обновить поля</td></tr>
+              <tr><td><span class="badge text-bg-danger  badge-method">DELETE</span></td><td><code>/posts/:id</code></td>           <td>удалить пост</td></tr>
+              <tr><td><span class="badge text-bg-success badge-method">GET</span></td>   <td><code>/comments</code></td>            <td>все комментарии</td></tr>
+              <tr><td><span class="badge text-bg-success badge-method">GET</span></td>   <td><code>/comments?postId=5</code></td>   <td>комментарии к посту №5</td></tr>
+              <tr><td><span class="badge text-bg-success badge-method">GET</span></td>   <td><code>/comments/:id</code></td>        <td>один комментарий</td></tr>
+              <tr><td><span class="badge text-bg-primary badge-method">POST</span></td>  <td><code>/comments</code></td>            <td>создать комментарий</td></tr>
+              <tr><td><span class="badge text-bg-danger  badge-method">DELETE</span></td><td><code>/comments/:id</code></td>        <td>удалить комментарий</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ── 11. Примеры ── -->
+        <h2 id="examples">11. Примеры запросов</h2>
+        <h3>Получить список постов</h3>
+        <div class="code-window">
+          <pre><code class="language-bash">curl.exe http://127.0.0.1:3000/posts</code></pre>
+        </div>
+        <h3>Создать пост</h3>
+        <div class="code-window">
+          <pre><code class="language-bash">curl.exe -X POST http://127.0.0.1:3000/posts ^
+  -H "Content-Type: application/json" ^
+  -d "{"userId":1,"title":"Привет","body":"Мир"}"</code></pre>
+        </div>
+        <p>Ответ (201 Created):</p>
+        <div class="code-window">
+          <pre><code class="language-json">{
+  "id": 101,
+  "userId": 1,
+  "title": "Привет",
+  "body": "Мир"
+}</code></pre>
+        </div>
+        <h3>Частично обновить пост</h3>
+        <div class="code-window">
+          <pre><code class="language-bash">curl.exe -X PATCH http://127.0.0.1:3000/posts/101 ^
+  -H "Content-Type: application/json" ^
+  -d "{"title":"Обновлённый заголовок"}"</code></pre>
+        </div>
+        <h3>Удалить пост</h3>
+        <div class="code-window">
+          <pre><code class="language-bash">curl.exe -X DELETE http://127.0.0.1:3000/posts/101</code></pre>
+        </div>
+
+        <!-- ── 12. Markup ── -->
+        <h2 id="markup">12. Клиентская разметка (markup)</h2>
+        <p>
+          Минимальная HTML-страница, которая запрашивает <code>/posts</code> у нашего API
+          и выводит заголовки постов. Тот же Bootstrap, что и на этой странице.
+          Достаточно сохранить файл и открыть в браузере (при запущенном <code>server.mjs</code>).
+        </p>
+        <div class="code-window">
+          <pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang="ru"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;title&gt;Посты из API&lt;/title&gt;
+  &lt;link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"&gt;
+&lt;/head&gt;
+&lt;body class="container py-4"&gt;
+  &lt;h1 class="mb-4"&gt;Посты&lt;/h1&gt;
+  &lt;div id="posts" class="row g-3"&gt;&lt;/div&gt;
+
+  &lt;script&gt;
+    async function loadPosts() {
+      const res  = await fetch('http://127.0.0.1:3000/posts');
+      const data = await res.json();
+
+      const container = document.getElementById('posts');
+      container.innerHTML = data.map(p =&gt; `
+        &lt;div class="col-md-6"&gt;
+          &lt;div class="card h-100 shadow-sm border-0"&gt;
+            &lt;div class="card-body"&gt;
+              &lt;h5 class="card-title fw-bold"&gt;${p.title}&lt;/h5&gt;
+              &lt;p class="card-text text-muted"&gt;${p.body}&lt;/p&gt;
+              &lt;span class="badge text-bg-secondary"&gt;userId: ${p.userId}&lt;/span&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      `).join('');
+    }
+
+    loadPosts().catch(console.error);
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+        </div>
+        <p>
+          Запрос идёт через <code>fetch</code>, CORS-заголовки <code>Access-Control-Allow-Origin: *</code>
+          в сервере разрешают обращение с любого домена — включая <code>file://</code>
+          и <code>localhost</code>. Если открыть эту разметку, увидите 100 карточек постов.
+        </p>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── JS ───────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"></script>
+<!-- Языковые пакеты -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/languages/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/languages/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/languages/json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/languages/bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/languages/xml.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+</body>
+</html>
