@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Авиационный технический колледж · Зачётный полёт курсанта</title>
+  <style>
+    /* ---------- GLOBAL ---------- */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    body {
+      overflow: hidden;
+      background: #0a0f1e;
+      color: #e0eaff;
+    }
+    canvas {
+      display: block;
+    }
+
+    /* ---------- OVERLAY / UI ---------- */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+      z-index: 10;
+    }
+    .overlay > * {
+      pointer-events: auto;
+    }
+
+    /* HUD */
+    .hud {
+      display: flex;
+      gap: 24px;
+      background: rgba(8, 18, 36, 0.75);
+      backdrop-filter: blur(6px);
+      padding: 12px 24px;
+      border-radius: 40px;
+      border: 1px solid #2a4a7a;
+      align-self: flex-start;
+      font-size: 1.1rem;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .hud span {
+      color: #7ab7ff;
+      font-weight: 600;
+    }
+    .hud .value {
+      color: #fff;
+      font-weight: 700;
+      margin-left: 4px;
+    }
+
+    /* CENTER MESSAGES */
+    .center-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      background: rgba(8, 18, 36, 0.85);
+      backdrop-filter: blur(12px);
+      padding: clamp(20px, 5vw, 40px) clamp(20px, 5vw, 50px);
+      border-radius: 24px;
+      border: 1px solid #2a4a7a;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;          /* ← ограничение по высоте */
+      overflow-y: auto;          /* ← вертикальная прокрутка */
+      overscroll-behavior: contain;
+      pointer-events: auto;
+      z-index: 20;
+      scrollbar-width: thin;
+      scrollbar-color: #3a6ea5 rgba(10, 20, 40, 0.5);
+    }
+    /* Кастомный скроллбар (WebKit) */
+    .center-message::-webkit-scrollbar {
+      width: 8px;
+    }
+    .center-message::-webkit-scrollbar-track {
+      background: rgba(10, 20, 40, 0.5);
+      border-radius: 4px;
+    }
+    .center-message::-webkit-scrollbar-thumb {
+      background: #3a6ea5;
+      border-radius: 4px;
+    }
+    .center-message::-webkit-scrollbar-thumb:hover {
+      background: #4a8ae0;
+    }
+
+    .center-message h1 {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      margin-bottom: 12px;
+      color: #7ab7ff;
+      letter-spacing: 1px;
+    }
+    .center-message h2 {
+      font-size: clamp(1.1rem, 3vw, 1.4rem);
+      margin-bottom: 16px;
+      color: #b8d4ff;
+    }
+    .center-message p {
+      line-height: 1.6;
+      margin-bottom: 16px;
+      color: #c0d0e8;
+    }
+    .center-message .story {
+      font-style: italic;
+      color: #9bb8e0;
+      border-left: 3px solid #3a6ea5;
+      padding-left: 16px;
+      text-align: left;
+      margin-bottom: 20px;
+      font-size: clamp(0.85rem, 2vw, 0.95rem);
+    }
+    .center-message .instructions {
+      text-align: left;
+      background: rgba(20, 40, 70, 0.5);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      font-size: clamp(0.85rem, 2vw, 0.95rem);
+      line-height: 1.7;
+    }
+    .center-message .instructions strong {
+      color: #7ab7ff;
+    }
+    .btn {
+      background: #1e4a8a;
+      color: #fff;
+      border: none;
+      padding: 14px 36px;
+      border-radius: 40px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 16px rgba(30, 74, 138, 0.5);
+    }
+    .btn:hover {
+      background: #2a6bc4;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(42, 107, 196, 0.6);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid #3a6ea5;
+      box-shadow: none;
+      margin-left: 12px;
+    }
+    .btn-secondary:hover {
+      background: rgba(42, 107, 196, 0.2);
+      box-shadow: none;
+    }
+
+    /* REGISTRATION FORM */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+      text-align: left;
+    }
+    .form-group label {
+      font-size: 0.9rem;
+      color: #9bb8e0;
+      font-weight: 600;
+    }
+    .form-group input {
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid #2a4a7a;
+      background: rgba(10, 20, 40, 0.8);
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .form-group input:focus {
+      border-color: #4a8ae0;
+    }
+
+    /* LEADERBOARD */
+    .leaderboard {
+      margin-top: 20px;
+      max-height: 180px;
+      overflow-y: auto;
+      text-align: left;
+      background: rgba(10, 20, 40, 0.5);
+      border-radius: 12px;
+      padding: 12px 16px;
+    }
+    .leaderboard h3 {
+      font-size: 1rem;
+      color: #7ab7ff;
+      margin-bottom: 8px;
+    }
+    .leaderboard table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .leaderboard td {
+      padding: 6px 4px;
+      border-bottom: 1px solid rgba(42, 74, 122, 0.4);
+    }
+    .leaderboard .rank {
+      color: #f0c040;
+      font-weight: 700;
+      width: 30px;
+    }
+    .leaderboard .name {
+      color: #e0eaff;
+    }
+    .leaderboard .score {
+      color: #7ab7ff;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    /* MISC */
+    .hidden {
+      display: none !important;
+    }
+    .sub-text {
+      font-size: 0.85rem;
+      color: #7a9ac0;
+      margin-top: 12px;
+    }
+    .fb-status {
+      font-size: 0.8rem;
+      color: #7a9ac0;
+      margin-top: 8px;
+      min-height: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== HUD ========== -->
+  <div class="overlay" id="hud" style="opacity:0; transition: opacity 0.5s;">
+    <div class="hud">
+      <div>⏱ <span class="value" id="hud-time">00:00</span></div>
+      <div>🎯 <span class="value" id="hud-rings">0 / 5</span></div>
+      <div>⭐ <span class="value" id="hud-score">0</span></div>
+    </div>
+  </div>
+
+  <!-- ========== СТАРТОВЫЙ ЭКРАН / СЮЖЕТ / РЕГИСТРАЦИЯ ========== -->
+  <div class="center-message" id="start-screen">
+    <h1>✈️ Авиационный технический колледж</h1>
+    <h2>Зачётный полёт курсанта</h2>
+    <div class="story">
+      «Вы — курсант выпускного курса Авиационного технического колледжа. После
+      месяцев теоретической подготовки и тренировок на симуляторе настал день
+      практического зачётного полёта. Инструктор проложил маршрут через пять
+      контрольных колец над учебным аэродромом. Вы должны пройти все кольца,
+      сохранить контроль над самолётом и благополучно посадить его на
+      взлётно-посадочную полосу. Ваш результат будет занесён в реестр колледжа.
+      Удачи, курсант!»
+    </div>
+    <div class="instructions">
+      <strong>📋 Инструкции</strong><br>
+      • <strong>↑ / ↓</strong> — тангаж (нос вверх / вниз)<br>
+      • <strong>← / →</strong> — рыскание (поворот влево / вправо)<br>
+      • <strong>Пробел</strong> — ускорение<br>
+      • <strong>Shift</strong> — замедление<br>
+      • Пролетите через все <strong>5 колец</strong>, затем <strong>приземлитесь на ВПП</strong>
+      (высота &lt; 5, скорость &lt; 12).<br>
+      • Пройдите маршрут как можно быстрее, чтобы набрать больше очков.
+    </div>
+
+    <!-- Форма регистрации -->
+    <form id="registration-form">
+      <div class="form-group">
+        <label for="cadet-name">Имя курсанта</label>
+        <input type="text" id="cadet-name" placeholder="например, Алексей Петров" required>
+      </div>
+      <div class="form-group">
+        <label for="cadet-id">Номер студенческого билета</label>
+        <input type="text" id="cadet-id" placeholder="например, АТК-2025-042" required>
+      </div>
+      <button type="submit" class="btn" id="start-btn">Начать зачёт</button>
+    </form>
+
+    <div class="leaderboard" id="leaderboard-start">
+      <h3>🏆 Таблица лидеров колледжа</h3>
+      <table id="leaderboard-table-start">
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="sub-text">Результаты сохраняются в облаке (Firebase).</p>
+    <div class="fb-status" id="fb-status-start"></div>
+  </div>
+
+  <!-- ========== ЭКРАН ЗАВЕРШЕНИЯ ========== -->
+  <div class="center-message hidden" id="end-screen">
+    <h1 id="end-title">Зачёт завершён</h1>
+    <h2 id="end-subtitle"></h2>
+    <p id="end-stats"></p>
+    <div class="leaderboard" id="leaderboard-end">
+      <h3>🏆 Таблица лидеров колледжа</h3>
+      <table id="leaderboard-table-end">
+        <tbody></tbody>
+      </table>
+    </div>
+    <button class="btn" id="restart-btn" style="margin-top:20px;">Пройти заново</button>
+    <button class="btn btn-secondary" id="new-cadet-btn">Новый курсант</button>
+    <div class="fb-status" id="fb-status-end"></div>
+  </div>
+
+  <!-- ========== FIREBASE SDK (v8 compat) ========== -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <!-- ========== THREE.JS IMPORTS ========== -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    // ============================================================
+    // 0. ИНИЦИАЛИЗАЦИЯ FIREBASE
+    // ============================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyAMJfnHdoqD3iRVb_aCffDF-yMwIZ1m5gY",
+      authDomain: "react-fire-5efc9.firebaseapp.com",
+      databaseURL: "https://react-fire-5efc9.firebaseio.com",
+      projectId: "react-fire-5efc9",
+      storageBucket: "react-fire-5efc9.firebasestorage.app",
+      messagingSenderId: "468187980044",
+      appId: "1:468187980044:web:6505aea9af21adc7d22929"
+    };
+
+    let database = null;
+    let firebaseReady = false;
+
+    try {
+      firebase.initializeApp(firebaseConfig);
+      database = firebase.database();
+      firebaseReady = true;
+      console.log('Firebase Realtime Database инициализирована');
+      setFbStatus('✔ Облачный реестр подключён', '#7ee787');
+    } catch (err) {
+      console.error('Ошибка инициализации Firebase:', err);
+      setFbStatus('⚠ Облачный реестр недоступен — результаты не сохранятся', '#ff9f7a');
+    }
+
+    function setFbStatus(text, color) {
+      ['fb-status-start', 'fb-status-end'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.textContent = text;
+          el.style.color = color || '#7a9ac0';
+        }
+      });
+    }
+
+    // ============================================================
+    // 1. СОСТОЯНИЕ ИГРЫ
+    // ============================================================
+    const STATE = {
+      MENU: 'menu',
+      PLAYING: 'playing',
+      ENDED: 'ended'
+    };
+
+    let gameState = STATE.MENU;
+    let cadetName = '';
+    let cadetId = '';
+
+    // Очки и время
+    let ringsCollected = 0;
+    const TOTAL_RINGS = 5;
+    let startTime = 0;
+    let elapsedTime = 0;
+    let score = 0;
+
+    // Узел Firebase для этого соревнования
+    const FB_NODE = 'aviation_college_results';
+
+    // ============================================================
+    // 2. СЦЕНА THREE.JS
+    // ============================================================
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a1a3a);
+    scene.fog = new THREE.FogExp2(0x0a1a3a, 0.008);
+
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    // ---- Освещение ----
+    const ambientLight = new THREE.AmbientLight(0x404060, 1.2);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffeedd, 2.5);
+    dirLight.position.set(60, 100, 40);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 1;
+    dirLight.shadow.camera.far = 300;
+    dirLight.shadow.camera.left = -120;
+    dirLight.shadow.camera.right = 120;
+    dirLight.shadow.camera.top = 120;
+    dirLight.shadow.camera.bottom = -120;
+    scene.add(dirLight);
+
+    const fillLight = new THREE.HemisphereLight(0x88aaff, 0x223344, 0.8);
+    scene.add(fillLight);
+
+    // ---- Земля / ВПП ----
+    const groundGeo = new THREE.PlaneGeometry(600, 600);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a3a2a, roughness: 0.9 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.5;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Взлётно-посадочная полоса
+    const runwayGeo = new THREE.BoxGeometry(30, 0.2, 200);
+    const runwayMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.7 });
+    const runway = new THREE.Mesh(runwayGeo, runwayMat);
+    runway.position.set(0, 0, -40);
+    runway.receiveShadow = true;
+    scene.add(runway);
+
+    // Разметка ВПП
+    for (let i = -90; i < 90; i += 10) {
+      const markGeo = new THREE.BoxGeometry(2, 0.05, 5);
+      const markMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, emissive: 0x445566 });
+      const mark = new THREE.Mesh(markGeo, markMat);
+      mark.position.set(0, 0.12, i);
+      scene.add(mark);
+    }
+
+    // Огни ВПП
+    for (let i = -90; i <= 90; i += 15) {
+      const lightGeo = new THREE.SphereGeometry(0.4, 6, 6);
+      const lightMat = new THREE.MeshStandardMaterial({ color: 0x44aaff, emissive: 0x44aaff, emissiveIntensity: 2 });
+      const lightL = new THREE.Mesh(lightGeo, lightMat);
+      lightL.position.set(-15, 0.5, i);
+      scene.add(lightL);
+      const lightR = lightL.clone();
+      lightR.position.x = 15;
+      scene.add(lightR);
+    }
+
+    // ---- Самолёт ----
+    const aircraft = new THREE.Group();
+
+    const fuselageGeo = new THREE.CylinderGeometry(0.6, 0.6, 5, 8);
+    fuselageGeo.rotateX(Math.PI / 2);
+    const fuselageMat = new THREE.MeshStandardMaterial({ color: 0xccccdd, metalness: 0.6, roughness: 0.3 });
+    const fuselage = new THREE.Mesh(fuselageGeo, fuselageMat);
+    fuselage.castShadow = true;
+    aircraft.add(fuselage);
+
+    const cockpitGeo = new THREE.SphereGeometry(0.7, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+    const cockpitMat = new THREE.MeshStandardMaterial({ color: 0x224488, metalness: 0.3, roughness: 0.2, transparent: true, opacity: 0.8 });
+    const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
+    cockpit.position.set(0, 0.5, 1.2);
+    cockpit.scale.set(0.8, 0.6, 0.8);
+    aircraft.add(cockpit);
+
+    const wingGeo = new THREE.BoxGeometry(10, 0.15, 1.8);
+    const wingMat = new THREE.MeshStandardMaterial({ color: 0xddddee, metalness: 0.5, roughness: 0.4 });
+    const wings = new THREE.Mesh(wingGeo, wingMat);
+    wings.position.set(0, 0.1, -0.2);
+    wings.castShadow = true;
+    aircraft.add(wings);
+
+    const tailGeo = new THREE.BoxGeometry(2.5, 0.15, 1.2);
+    const tail = new THREE.Mesh(tailGeo, wingMat);
+    tail.position.set(0, 0.1, -2.4);
+    tail.castShadow = true;
+    aircraft.add(tail);
+
+    const vStabGeo = new THREE.BoxGeometry(0.15, 1.2, 1.2);
+    const vStab = new THREE.Mesh(vStabGeo, wingMat);
+    vStab.position.set(0, 0.7, -2.4);
+    vStab.castShadow = true;
+    aircraft.add(vStab);
+
+    aircraft.position.set(0, 3, 80);
+    aircraft.rotation.y = Math.PI;
+    scene.add(aircraft);
+
+    // ---- Кольца ----
+    const rings = [];
+    const ringRadius = 4;
+    const ringTube = 0.4;
+
+    const ringPositions = [
+      { x: 0, y: 18, z: 40 },
+      { x: 8, y: 22, z: 10 },
+      { x: -6, y: 25, z: -20 },
+      { x: 10, y: 20, z: -50 },
+      { x: 0, y: 15, z: -80 }
+    ];
+
+    ringPositions.forEach((pos, index) => {
+      const ringGeo = new THREE.TorusGeometry(ringRadius, ringTube, 12, 24);
+      const ringMat = new THREE.MeshStandardMaterial({
+        color: 0xffaa00,
+        emissive: 0xff6600,
+        emissiveIntensity: 0.8,
+        metalness: 0.3,
+        roughness: 0.4
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.set(pos.x, pos.y, pos.z);
+      ring.rotation.x = Math.PI / 2;
+      ring.castShadow = true;
+      ring.receiveShadow = true;
+      ring.userData.collected = false;
+      ring.userData.index = index;
+      scene.add(ring);
+      rings.push(ring);
+    });
+
+    // ---- Звёзды ----
+    const starGeo = new THREE.BufferGeometry();
+    const starCount = 400;
+    const starPos = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount * 3; i += 3) {
+      starPos[i] = (Math.random() - 0.5) * 500;
+      starPos[i + 1] = Math.random() * 150 + 10;
+      starPos[i + 2] = (Math.random() - 0.5) * 500;
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    const starMat = new THREE.PointsMaterial({ color: 0x88aaff, size: 0.5, transparent: true, opacity: 0.6 });
+    const stars = new THREE.Points(starGeo, starMat);
+    scene.add(stars);
+
+    // ============================================================
+    // 3. ФИЗИКА И УПРАВЛЕНИЕ САМОЛЁТОМ
+    // ============================================================
+    const keys = {
+      ArrowUp: false,
+      ArrowDown: false,
+      ArrowLeft: false,
+      ArrowRight: false,
+      Space: false,
+      ShiftLeft: false
+    };
+
+    const flight = {
+      speed: 8,
+      maxSpeed: 20,
+      minSpeed: 3,
+      pitchRate: 0.8,
+      yawRate: 1.0,
+      pitch: 0,
+      yaw: Math.PI,
+      velocity: new THREE.Vector3()
+    };
+
+    // ============================================================
+    // 4. ЗВУК
+    // ============================================================
+    let audioCtx = null;
+    function beep(freq, duration = 0.1, type = 'sine') {
+      if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+      }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // ============================================================
+    // 5. ФУНКЦИИ ИГРЫ
+    // ============================================================
+
+    function updateHUD() {
+      document.getElementById('hud-time').textContent = formatTime(elapsedTime);
+      document.getElementById('hud-rings').textContent = `${ringsCollected} / ${TOTAL_RINGS}`;
+      document.getElementById('hud-score').textContent = Math.floor(score);
+    }
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function checkRingCollisions() {
+      if (ringsCollected >= TOTAL_RINGS) return;
+
+      rings.forEach(ring => {
+        if (ring.userData.collected) return;
+
+        const dist = aircraft.position.distanceTo(ring.position);
+        if (dist < ringRadius + 1.5) {
+          const verticalDiff = Math.abs(aircraft.position.y - ring.position.y);
+          if (verticalDiff < ringRadius + 1.0) {
+            ring.userData.collected = true;
+            ring.visible = false;
+            ringsCollected++;
+            score += 100;
+            beep(880, 0.12, 'sine');
+            updateHUD();
+
+            if (ringsCollected >= TOTAL_RINGS) {
+              beep(1200, 0.2, 'triangle');
+            }
+          }
+        }
+      });
+    }
+
+    function checkLanding() {
+      if (ringsCollected < TOTAL_RINGS) return false;
+
+      const onRunwayX = Math.abs(aircraft.position.x) < 18;
+      const onRunwayZ = aircraft.position.z > -140 && aircraft.position.z < 60;
+      const lowAltitude = aircraft.position.y < 4;
+      const lowSpeed = flight.speed < 12;
+
+      return onRunwayX && onRunwayZ && lowAltitude && lowSpeed;
+    }
+
+    function endGame(success, reason = '') {
+      if (gameState === STATE.ENDED) return;
+      gameState = STATE.ENDED;
+
+      let timeBonus = Math.max(0, 300 - elapsedTime * 2);
+      let landingBonus = success ? 500 : 0;
+      score += Math.floor(timeBonus + landingBonus);
+
+      // Сохранение результата в Firebase
+      saveResult({
+        name: cadetName,
+        id: cadetId,
+        score: Math.floor(score),
+        rings: ringsCollected,
+        time: Math.round(elapsedTime * 100) / 100,
+        landed: success,
+        date: Date.now()
+      });
+
+      const endScreen = document.getElementById('end-screen');
+      const startScreen = document.getElementById('start-screen');
+      startScreen.classList.add('hidden');
+      endScreen.classList.remove('hidden');
+
+      document.getElementById('end-title').textContent = success ? '✅ Зачёт сдан' : '⚠️ Зачёт не сдан';
+      document.getElementById('end-subtitle').textContent = success ? 'Посадка выполнена успешно.' : reason || 'Маршрут не пройден.';
+
+      const stats = `Кольца: ${ringsCollected}/${TOTAL_RINGS} · Время: ${formatTime(elapsedTime)} · Очки: ${Math.floor(score)}`;
+      document.getElementById('end-stats').textContent = stats;
+
+      renderLeaderboard('leaderboard-table-end');
+
+      document.getElementById('hud').style.opacity = '0';
+    }
+
+    // ---- Сохранение результата в Firebase ----
+    function saveResult(result) {
+      if (!firebaseReady || !database) {
+        console.warn('Firebase не готова — результат не сохранён');
+        return;
+      }
+      const ref = database.ref(FB_NODE).push();
+      ref.set(result)
+        .then(() => {
+          console.log('Результат сохранён в Firebase:', result);
+          setFbStatus('✔ Результат сохранён в облачный реестр', '#7ee787');
+        })
+        .catch((err) => {
+          console.error('Ошибка сохранения в Firebase:', err);
+          setFbStatus('⚠ Не удалось сохранить в облачный реестр: ' + err.message, '#ff9f7a');
+        });
+    }
+
+    // ---- Отрисовка таблицы лидеров из Firebase ----
+    function renderLeaderboard(tableId) {
+      const tbody = document.querySelector(`#${tableId} tbody`);
+      if (!tbody) return;
+
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#7a9ac0;">Загрузка реестра…</td></tr>';
+
+      if (!firebaseReady || !database) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#ff9f7a;">Облачный реестр недоступен</td></tr>';
+        return;
+      }
+
+      database.ref(FB_NODE).once('value')
+        .then((snapshot) => {
+          const results = [];
+          snapshot.forEach((child) => {
+            const val = child.val();
+            if (val && typeof val.score === 'number') {
+              results.push(val);
+            }
+          });
+
+          results.sort((a, b) => b.score - a.score);
+          const top = results.slice(0, 8);
+
+          if (top.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#7a9ac0;">Пока нет результатов — станьте первым курсантом!</td></tr>';
+            return;
+          }
+
+          tbody.innerHTML = '';
+          top.forEach((r, i) => {
+            const tr = document.createElement('tr');
+            const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+            tr.innerHTML = `
+              <td class="rank">${rank}</td>
+              <td class="name">${escapeHtml(r.name || 'Неизвестно')}</td>
+              <td class="score">${Math.floor(r.score)}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        })
+        .catch((err) => {
+          console.error('Ошибка загрузки таблицы лидеров:', err);
+          tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#ff9f7a;">Не удалось загрузить реестр</td></tr>';
+        });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function startGame() {
+      gameState = STATE.PLAYING;
+      ringsCollected = 0;
+      score = 0;
+      elapsedTime = 0;
+      startTime = performance.now();
+
+      aircraft.position.set(0, 3, 80);
+      aircraft.rotation.set(0, Math.PI, 0);
+      flight.speed = 8;
+      flight.pitch = 0;
+      flight.yaw = Math.PI;
+
+      rings.forEach((ring) => {
+        ring.visible = true;
+        ring.userData.collected = false;
+      });
+
+      document.getElementById('start-screen').classList.add('hidden');
+      document.getElementById('end-screen').classList.add('hidden');
+      document.getElementById('hud').style.opacity = '1';
+
+      updateHUD();
+      beep(440, 0.15, 'sine');
+    }
+
+    // ============================================================
+    // 6. ЦИКЛ АНИМАЦИИ
+    // ============================================================
+    let lastTime = performance.now();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const now = performance.now();
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      if (gameState === STATE.PLAYING) {
+        elapsedTime = (now - startTime) / 1000;
+        updateHUD();
+
+        if (keys.ArrowUp)   flight.pitch += flight.pitchRate * dt;
+        if (keys.ArrowDown) flight.pitch -= flight.pitchRate * dt;
+        if (keys.ArrowLeft)  flight.yaw += flight.yawRate * dt;
+        if (keys.ArrowRight) flight.yaw -= flight.yawRate * dt;
+
+        if (keys.Space) flight.speed = Math.min(flight.speed + 12 * dt, flight.maxSpeed);
+        if (keys.ShiftLeft) flight.speed = Math.max(flight.speed - 8 * dt, flight.minSpeed);
+
+        flight.pitch = Math.max(-1.2, Math.min(1.2, flight.pitch));
+
+        aircraft.rotation.x = flight.pitch;
+        aircraft.rotation.y = flight.yaw;
+
+        const forward = new THREE.Vector3(
+          -Math.sin(flight.yaw) * Math.cos(flight.pitch),
+          Math.sin(flight.pitch),
+          -Math.cos(flight.yaw) * Math.cos(flight.pitch)
+        );
+        aircraft.position.addScaledVector(forward, flight.speed * dt);
+
+        if (aircraft.position.y < 1.5) {
+          aircraft.position.y = 1.5;
+          flight.pitch = Math.max(0, flight.pitch);
+        }
+
+        checkRingCollisions();
+
+        if (checkLanding()) {
+          endGame(true);
+        }
+
+        if (aircraft.position.y < 0.5 || aircraft.position.length() > 400) {
+          endGame(false, 'Самолёт покинул тренировочную зону.');
+        }
+
+        if (elapsedTime > 180) {
+          endGame(false, 'Превышено время выполнения.');
+        }
+      }
+
+      if (gameState === STATE.PLAYING || gameState === STATE.MENU) {
+        const idealOffset = new THREE.Vector3(0, 5, 12).applyQuaternion(aircraft.quaternion);
+        const idealPos = aircraft.position.clone().add(idealOffset);
+        camera.position.lerp(idealPos, 0.08);
+
+        const lookTarget = aircraft.position.clone().add(
+          new THREE.Vector3(0, 2, -8).applyQuaternion(aircraft.quaternion)
+        );
+        camera.lookAt(lookTarget);
+      }
+
+      stars.rotation.y += 0.0002;
+
+      renderer.render(scene, camera);
+    }
+
+    // ============================================================
+    // 7. ОБРАБОТЧИКИ СОБЫТИЙ
+    // ============================================================
+    window.addEventListener('keydown', (e) => {
+      if (e.code in keys) {
+        keys[e.code] = true;
+        if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code in keys) {
+        keys[e.code] = false;
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    document.getElementById('registration-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      cadetName = document.getElementById('cadet-name').value.trim();
+      cadetId = document.getElementById('cadet-id').value.trim();
+      if (cadetName && cadetId) {
+        startGame();
+      }
+    });
+
+    document.getElementById('restart-btn').addEventListener('click', () => {
+      document.getElementById('end-screen').classList.add('hidden');
+      startGame();
+    });
+
+    document.getElementById('new-cadet-btn').addEventListener('click', () => {
+      document.getElementById('end-screen').classList.add('hidden');
+      document.getElementById('start-screen').classList.remove('hidden');
+      document.getElementById('hud').style.opacity = '0';
+      gameState = STATE.MENU;
+      document.getElementById('cadet-name').value = '';
+      document.getElementById('cadet-id').value = '';
+      renderLeaderboard('leaderboard-table-start');
+    });
+
+    // ============================================================
+    // 8. ИНИЦИАЛИЗАЦИЯ
+    // ============================================================
+    camera.position.set(0, 12, 100);
+    camera.lookAt(0, 5, 0);
+
+    // Загрузка таблиц лидеров из Firebase
+    renderLeaderboard('leaderboard-table-start');
+    renderLeaderboard('leaderboard-table-end');
+
+    // Живое обновление — обновляем стартовую таблицу при новых результатах
+    if (firebaseReady && database) {
+      database.ref(FB_NODE).on('child_added', () => {
+        if (gameState === STATE.MENU) {
+          renderLeaderboard('leaderboard-table-start');
+        }
+      });
+    }
+
+    animate();
+
+  </script>
+</body>
+</html>
