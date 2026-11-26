@@ -1,0 +1,481 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Занятие 26.11.2026 — Голосование +5 / −5 и средний рейтинг</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github-dark.min.css">
+
+  <style>
+    .fb-card {
+      background: #fff;
+      border: 1px solid #d9d9d9;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.08);
+      padding: 20px;
+    }
+    .fb-card h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #3b5998;
+      margin-bottom: 1rem;
+    }
+    .fb-subtitle { color: #6b7280; font-size: .9rem; margin-bottom: 1.25rem; }
+
+    /* Карточки */
+    .avatar-pick { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .avatar-option {
+      position: relative; cursor: pointer; border-radius: 10px; padding: 8px;
+      border: 3px solid transparent; background: #f5f6f8; width: 150px; text-align: center;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+    }
+    .avatar-option img {
+      display: block; width: 110px; height: 110px; border-radius: 50%;
+      object-fit: cover; margin: 0 auto 8px; background: #e5e7eb;
+      border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    }
+    .avatar-option:hover { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(59,89,152,.25); }
+    .avatar-option.winner { border-color: #16a34a; box-shadow: 0 0 0 4px rgba(22,163,74,.18); }
+    .avatar-option.loser  { border-color: #dc2626; opacity: .7; }
+    .avatar-pick.locked .avatar-option { pointer-events: none; }
+    .avatar-option .avatar-fio {
+      display: block; font-size: .85rem; font-weight: 700; color: #1f2937;
+      line-height: 1.25; min-height: 2.4em;
+    }
+    .avatar-option .avatar-tag { display: block; font-size: .7rem; color: #6b7280; margin-top: 2px; }
+    .avatar-option .avatar-score {
+      display: inline-block; margin-top: 6px; font-size: .75rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 999px; background: #eef2f7; color: #3b5998;
+    }
+    .avatar-option .avatar-avg {
+      display: inline-block; margin-left: 4px; font-size: .75rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 999px; background: #fff7e6; color: #b45309;
+    }
+
+    .vs-badge {
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; color: #3b5998; font-size: 1.4rem; user-select: none;
+    }
+
+    .result-panel {
+      background: #f7f9fc; border: 1px solid #e3e8ef; border-radius: 8px;
+      padding: 16px; height: 100%;
+    }
+    .result-panel .result-title { font-weight: 700; color: #1f2937; margin-bottom: 8px; }
+    .delta-line { font-size: 1.1rem; font-weight: 700; margin: 6px 0; }
+    .delta-win  { color: #16a34a; }
+    .delta-lose { color: #dc2626; }
+    .result-empty { color: #9ca3af; font-size: .9rem; }
+
+    .fb-btn {
+      background: #3b5998; border: none; color: #fff; font-weight: 600;
+      padding: 10px 18px; border-radius: 6px; transition: background .2s;
+    }
+    .fb-btn:hover { background: #2d4373; color: #fff; }
+    .fb-btn-outline { background: transparent; border: 2px solid #3b5998; color: #3b5998; }
+    .fb-btn-outline:hover { background: #3b5998; color: #fff; }
+
+    .hint { font-size: .85rem; color: #6b7280; margin-top: 10px; }
+
+    /* Таблица */
+    .all-ratings {
+      background: #fff; border: 1px solid #d9d9d9; border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.08); padding: 20px; margin-top: 24px;
+    }
+    .all-ratings h2 { font-size: 1.25rem; font-weight: 700; color: #3b5998; margin-bottom: .25rem; }
+    .all-ratings .sub { color: #6b7280; font-size: .85rem; margin-bottom: 1rem; }
+    .ratings-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .ratings-table th {
+      text-align: left; color: #6b7280; font-weight: 600; font-size: .75rem;
+      text-transform: uppercase; letter-spacing: .04em; padding: 6px 8px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .ratings-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .ratings-table tr:last-child td { border-bottom: none; }
+    .ratings-table .r-avatar {
+      width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+      border: 1px solid #e5e7eb;
+    }
+    .ratings-table .r-name { font-weight: 600; color: #1f2937; }
+    .ratings-table .r-count { color: #9ca3af; font-size: .75rem; font-weight: 500; }
+
+    /* Средний рейтинг в формате 4.8 */
+    .avg-value {
+      font-weight: 800; font-size: 1.15rem; text-align: right;
+      color: #b45309; white-space: nowrap;
+    }
+    .avg-stars {
+      font-size: .8rem; color: #f5b301; letter-spacing: 1px;
+      text-align: right; white-space: nowrap;
+    }
+
+    .rank-badge {
+      display: inline-block; min-width: 24px; text-align: center;
+      font-weight: 800; color: #6b7280; font-size: .8rem;
+    }
+    .rank-badge.top1 { color: #d97706; }
+    .rank-badge.top2 { color: #6b7280; }
+    .rank-badge.top3 { color: #b45309; }
+
+    #allRatingsEmpty { color: #9ca3af; font-size: .85rem; text-align: center; padding: 12px 0; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar bg-body-tertiary mb-4">
+  <div class="container d-flex justify-content-between align-items-center w-100">
+    <a class="navbar-brand" href="https://urvanceva912.github.io/urvanceva912/">...</a>
+    <img src="https://avatars.mds.yandex.net/i?id=e2dbf0eea03d887a95a6b2a5b1cfe7a35112f997-5243585-images-thumbs&amp;n=13" alt="Аватар пользователя" style="
+      width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: block;
+      border: 3px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    ">
+  </div>
+</nav>
+
+<div class="container">
+  <div class="p-4 p-md-5 mb-4 rounded text-bg-primary">
+    <h1 class="display-4 fst-italic">Занятие 26.11.2026</h1>
+    <p class="lead my-3">Выберите одного из двух — он получит <b>+5</b>, второй <b>−5</b>. Пары: девушка/девушка, мужчина/мужчина или мужчина/женщина. Внизу — средний рейтинг всех профилей в формате <b>4.8</b>.</p>
+    <p class="lead mb-0"><a href="./" class="text-white fw-bold">Главная страница...</a></p>
+  </div>
+
+  <!-- Голосование -->
+  <div class="mb-4">
+    <h2>Кто лучше?</h2>
+    <div class="fb-card">
+      <h2>Голосование</h2>
+      <p class="fb-subtitle">Нажмите на карточку — победитель <b>+5</b>, проигравший <b>−5</b>. Средний рейтинг считается как <code>5 × победы / голоса</code>.</p>
+
+      <div class="row g-4 align-items-stretch">
+        <div class="col-12 col-md-8">
+          <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap">
+            <div class="avatar-pick" id="avatarPick"></div>
+            <div class="vs-badge d-none d-md-flex" id="vsBadge">VS</div>
+          </div>
+          <div class="hint" id="hint">Загрузка пары…</div>
+          <div class="d-flex flex-wrap gap-2 mt-3">
+            <button class="fb-btn fb-btn-outline" id="regenBtn">Пропустить пару</button>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="result-panel">
+            <div class="result-title">Последний голос</div>
+            <div id="resultBox">
+              <div class="result-empty">Пока нет голосов. Выберите карточку слева.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Общий рейтинг -->
+  <div class="all-ratings">
+    <h2>Рейтинг всех профилей</h2>
+    <div class="sub">Средний рейтинг = <code>5 × победы / голоса</code>, формат <b>4.8</b>. Сортировка по среднему. Данные из Firebase, обновляются в реальном времени.</div>
+    <div id="allRatingsEmpty">Пока нет голосов.</div>
+    <table class="ratings-table d-none" id="allRatingsTable">
+      <thead>
+        <tr>
+          <th style="width:40px;">#</th>
+          <th>Профиль</th>
+          <th class="text-end">Средний</th>
+          <th class="text-end">Голосов</th>
+        </tr>
+      </thead>
+      <tbody id="allRatingsBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Код -->
+  <div class="mt-5 mb-5">
+    <h2>Как считается средний рейтинг</h2>
+    <pre><code class="language-javascript hljs">
+// Узел: post26112026/ratings/{profileId}
+// { fio, src, gender, score, wins, losses, votes }
+
+// Голос: победитель +5 и wins+1, проигравший −5 и losses+1
+function bump(profile, delta, isWin) {
+  const ref = RATINGS.child(profile.id);
+  return ref.transaction(cur => {
+    const d = cur || { fio: profile.fio, src: profile.src,
+                       gender: profile.gender,
+                       score: 0, wins: 0, losses: 0, votes: 0 };
+    d.score  += delta;         // +5 или −5
+    d.votes  += 1;             // всего голосований
+    if (isWin) d.wins  += 1;   // побед
+    else       d.losses += 1;  // поражений
+    return d;
+  });
+}
+
+// Средний рейтинг в формате 4.8:
+// 5 × победы / голоса, округление до 1 знака
+function avgRating(profile) {
+  if (!profile.votes) return 0;
+  return +(5 * profile.wins / profile.votes).toFixed(1);
+}
+    </code></pre>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/languages/javascript.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAMJfnHdoqD3iRVb_aCffDF-yMwIZ1m5gY",
+    authDomain: "react-fire-5efc9.firebaseapp.com",
+    databaseURL: "https://react-fire-5efc9.firebaseio.com",
+    projectId: "react-fire-5efc9",
+    storageBucket: "react-fire-5efc9.firebasestorage.app",
+    messagingSenderId: "468187980044",
+    appId: "1:468187980044:web:6505aea9af21adc7d22929"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+  const RATINGS = database.ref('post26112026/ratings');
+
+  const MALE   = Array.from({length: 64}, (_, i) =>
+    `https://econolabs.github.io/avatars/male${String(i + 1).padStart(2, '0')}.jpg`);
+  const FEMALE = Array.from({length: 64}, (_, i) =>
+    `https://econolabs.github.io/avatars/female${String(i + 1).padStart(2, '0')}.jpg`);
+
+  const LAST_NAMES = ['Иванов','Петров','Сидоров','Козлов','Смирнов','Кузнецов','Попов','Соколов','Лебедев','Новиков','Морозов','Волков','Егоров','Павлов','Семёнов'];
+  const MALE_NAMES = ['Иван','Пётр','Сергей','Алексей','Дмитрий','Андрей','Михаил','Николай','Владимир','Артём','Максим','Роман'];
+  const FEMALE_NAMES = ['Мария','Анна','Елена','Ольга','Дарья','Софья','Виктория','Ксения','Татьяна','Ирина','Наталья','Полина'];
+
+  const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  function randomPerson(gender) {
+    const isMale = gender === 'male';
+    const name = rand(isMale ? MALE_NAMES : FEMALE_NAMES);
+    const lastBase = rand(LAST_NAMES);
+    const last = isMale
+      ? lastBase
+      : (lastBase.endsWith('ий') ? lastBase.slice(0, -2) + 'ая' : lastBase + 'а');
+    const patronymic = isMale
+      ? rand(['Иванович','Петрович','Сергеевич','Алексеевич','Дмитриевич'])
+      : rand(['Ивановна','Петровна','Сергеевна','Алексеевна','Дмитриевна']);
+    return { id: uid(), gender, fio: `${last} ${name} ${patronymic}`,
+             src: isMale ? rand(MALE) : rand(FEMALE) };
+  }
+
+  // 1/3 муж/муж, 1/3 жен/жен, 1/3 муж/жен
+  function makePair() {
+    const r = Math.random();
+    if (r < 1/3) return [randomPerson('male'),   randomPerson('male')];
+    if (r < 2/3) return [randomPerson('female'), randomPerson('female')];
+    return         [randomPerson('male'),   randomPerson('female')];
+  }
+
+  const avatarPick = document.getElementById('avatarPick');
+  const vsBadge    = document.getElementById('vsBadge');
+  const hint       = document.getElementById('hint');
+  const regenBtn   = document.getElementById('regenBtn');
+  const resultBox  = document.getElementById('resultBox');
+  const tableEl    = document.getElementById('allRatingsTable');
+  const tableBody  = document.getElementById('allRatingsBody');
+  const emptyEl    = document.getElementById('allRatingsEmpty');
+
+  let pair = [];
+  let locked = false;
+
+  // ── Средний рейтинг в формате 4.8 ──
+  function avgRating(p) {
+    if (!p || !p.votes) return 0;
+    return +(5 * (p.wins || 0) / p.votes).toFixed(1);
+  }
+
+  function renderStars(v) {
+    const full = Math.floor(v);
+    const half = (v - full) >= 0.5 ? 1 : 0;
+    return '★'.repeat(full) + (half ? '⯨' : '') + '☆'.repeat(5 - full - half);
+  }
+
+  // ── Отрисовка пары ──
+  function renderPair() {
+    avatarPick.innerHTML = '';
+    pair.forEach((p, idx) => {
+      const card = document.createElement('div');
+      card.className = 'avatar-option';
+      card.dataset.idx = idx;
+      card.innerHTML = `
+        <img src="${p.src}" alt="${p.fio}" loading="lazy"
+             onerror="this.src='https://via.placeholder.com/110?text=avatar'">
+        <span class="avatar-fio">${p.fio}</span>
+        <span class="avatar-tag">${p.gender === 'male' ? 'мужской' : 'женский'}</span>
+        <span class="avatar-score" data-score-id="${p.id}">0</span>
+        <span class="avatar-avg"   data-avg-id="${p.id}">0.0</span>
+      `;
+      card.addEventListener('click', () => vote(idx));
+      avatarPick.appendChild(card);
+    });
+    avatarPick.classList.remove('locked');
+    vsBadge.classList.toggle('d-none', pair.length < 2);
+    hint.textContent = 'Нажмите на карточку, чтобы отдать голос (+5 победителю, −5 проигравшему).';
+    locked = false;
+
+    pair.forEach(p => RATINGS.child(p.id).once('value').then(s => {
+      const v = s.val();
+      const sBadge = avatarPick.querySelector(`[data-score-id="${p.id}"]`);
+      const aBadge = avatarPick.querySelector(`[data-avg-id="${p.id}"]`);
+      if (sBadge) {
+        const sc = (v && v.score) || 0;
+        sBadge.textContent = (sc > 0 ? '+' : '') + sc;
+      }
+      if (aBadge) {
+        aBadge.textContent = avgRating(v).toFixed(1) + ' ★';
+      }
+    }));
+  }
+
+  // ── Голос ──
+  function vote(winnerIdx) {
+    if (locked || pair.length < 2) return;
+    locked = true;
+    avatarPick.classList.add('locked');
+
+    const winner = pair[winnerIdx];
+    const loser  = pair[1 - winnerIdx];
+
+    const cards = avatarPick.querySelectorAll('.avatar-option');
+    cards[winnerIdx].classList.add('winner');
+    cards[1 - winnerIdx].classList.add('loser');
+    hint.textContent = 'Голос принят. Сохраняем…';
+
+    applyVote(winner, loser)
+      .then(() => {
+        hint.textContent = 'Голос учтён. Загружаем новую пару…';
+        showResult(winner, loser);
+        setTimeout(() => {
+          pair = makePair();
+          renderPair();
+        }, 900);
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Не удалось сохранить голос. Проверьте правила БД.');
+        locked = false;
+        avatarPick.classList.remove('locked');
+        hint.textContent = 'Ошибка. Попробуйте ещё раз.';
+        cards[winnerIdx].classList.remove('winner');
+        cards[1 - winnerIdx].classList.remove('loser');
+      });
+  }
+
+  // ── Транзакция: score, wins/losses, votes ──
+  function bump(profile, delta, isWin) {
+    const ref = RATINGS.child(profile.id);
+    return ref.transaction(cur => {
+      const d = cur || {
+        fio: profile.fio, src: profile.src, gender: profile.gender,
+        score: 0, wins: 0, losses: 0, votes: 0
+      };
+      d.fio = profile.fio;
+      d.src = profile.src;
+      d.gender = profile.gender;
+      d.score  = (d.score  || 0) + delta;
+      d.votes  = (d.votes  || 0) + 1;
+      if (isWin) d.wins   = (d.wins   || 0) + 1;
+      else       d.losses = (d.losses || 0) + 1;
+      return d;
+    });
+  }
+
+  function applyVote(winner, loser) {
+    return Promise.all([
+      bump(winner, +5, true),
+      bump(loser,  -5, false)
+    ]);
+  }
+
+  // ── Панель последнего голоса ──
+  function showResult(winner, loser) {
+    resultBox.innerHTML = `
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <img src="${winner.src}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #16a34a;">
+        <div>
+          <div class="fw-bold" style="font-size:.85rem;">${winner.fio}</div>
+          <div class="delta-line delta-win mb-0">+5</div>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <img src="${loser.src}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #dc2626;filter:grayscale(.4);">
+        <div>
+          <div class="fw-bold" style="font-size:.85rem;">${loser.fio}</div>
+          <div class="delta-line delta-lose mb-0">−5</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── Таблица всех рейтингов (без столбца «Сумма») ──
+  RATINGS.on('value', snap => {
+    const rows = [];
+    snap.forEach(child => {
+      const v = child.val();
+      if (v && typeof v.score === 'number') rows.push({ id: child.key, ...v });
+    });
+
+    rows.sort((a, b) => {
+      const d = avgRating(b) - avgRating(a);
+      return d !== 0 ? d : (b.score - a.score);
+    });
+
+    if (!rows.length) {
+      emptyEl.classList.remove('d-none');
+      tableEl.classList.add('d-none');
+      return;
+    }
+    emptyEl.classList.add('d-none');
+    tableEl.classList.remove('d-none');
+    tableBody.innerHTML = '';
+
+    rows.forEach((r, i) => {
+      const avg = avgRating(r);
+      const tr = document.createElement('tr');
+      const rankClass = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+      tr.innerHTML = `
+        <td><span class="rank-badge ${rankClass}">${i + 1}</span></td>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <img class="r-avatar" src="${r.src || ''}" alt=""
+                 onerror="this.style.visibility='hidden'">
+            <div>
+              <div class="r-name">${r.fio || 'Без имени'}</div>
+              <div class="r-count">${r.gender === 'male' ? 'мужской' : 'женский'}</div>
+            </div>
+          </div>
+        </td>
+        <td class="text-end">
+          <div class="avg-value">${avg.toFixed(1)}</div>
+          <div class="avg-stars">${renderStars(avg)}</div>
+        </td>
+        <td class="text-end">
+          <div class="r-count">${r.votes}</div>
+        </td>
+      `;
+      tableBody.appendChild(tr);
+    });
+  });
+
+  regenBtn.addEventListener('click', () => {
+    if (locked) return;
+    pair = makePair();
+    renderPair();
+  });
+
+  pair = makePair();
+  renderPair();
+</script>
+
+</body>
+</html>
